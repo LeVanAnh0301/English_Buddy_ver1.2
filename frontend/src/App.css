@@ -1,0 +1,50 @@
+/* App.css */
+
+/* Reset cơ bản */
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+/* Light mode mặc định */
+body {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background-color: #007bff;
+  color: white;
+}
+
+button {
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: none;
+}
+
+/* Dark mode */
+.dark-mode {
+  background-color: #121212; /* nền đen toàn màn hình */
+  color: #ffffff !important; /* chữ trắng rõ ràng */
+  min-height: 100vh; /* đảm bảo full màn hình */
+}
+
+/* Navbar khi dark mode */
+.dark-mode .navbar {
+  background-color: #222; /* navbar đen */
+  color: #ffffff; /* chữ navbar trắng */
+}
+
+/* Link & heading trong dark mode */
+.dark-mode h2,
+.dark-mode h3,
+.dark-mode p,
+.dark-mode a {
+  color: #ffffff !important;
+}
