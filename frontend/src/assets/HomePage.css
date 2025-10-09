@@ -83,6 +83,7 @@ html {
   width: 250px;
 }
 
+
 /* About */
 .about {
   background: #f0f9ff; /* pastel, very light blue/green tone */
@@ -168,4 +169,72 @@ html {
 .contact-form textarea {
   width: 100%;
   resize: vertical;
+}
+
+.features-section {
+  padding: 4rem 2rem;
+  background-color: #f0f8ff; /* Pastel sky blue background */
+  text-align: center;
+}
+
+.features-content h2 {
+  font-size: 2.2rem;
+  color: #343a40;
+  margin-bottom: 1rem;
+}
+
+.features-content p {
+  font-size: 1.1rem;
+  color: #6c757d;
+  max-width: 700px;
+  margin: 0 auto 3rem auto;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.feature-card {
+  background: white;
+  padding: 2.5rem 2rem;
+  border-radius: 16px;
+  text-align: left;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+}
+
+.feature-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  color: white;
+}
+
+.feature-icon.icon-listen { background-color: #007bff; }
+.feature-icon.icon-speak { background-color: #dc3545; }
+.feature-icon.icon-memory { background-color: #ffc107; }
+.feature-icon.icon-progress { background-color: #28a745; }
+
+.feature-card h3 {
+  font-size: 1.4rem;
+  color: #343a40;
+  margin-bottom: 0.5rem;
+}
+
+.feature-card p {
+  color: #6c757d;
+  line-height: 1.6;
 }
