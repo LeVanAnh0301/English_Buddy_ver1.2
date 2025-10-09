@@ -12,10 +12,13 @@ function VideoDetailPage() {
   const [exercise, setExercise] = useState(null);
   const [isLoadingExercise, setIsLoadingExercise] = useState(true);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [recordingTranscript, setRecordingTranscript] = useState("");
+  const [isTranscribing, setIsTranscribing] = useState(false);
   
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const iframeRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   // Fetch exercise data from API
   useEffect(() => {
@@ -68,10 +71,59 @@ function VideoDetailPage() {
 
   const startRecording = async () => {
     try {
+      // Check if speech recognition is supported
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert("Trình duyệt của bạn không hỗ trợ speech recognition. Vui lòng sử dụng Chrome hoặc Edge.");
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
+
+      // Initialize speech recognition
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
+
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US'; // Set to English for better recognition
+
+      let finalTranscript = '';
+
+      recognition.onstart = () => {
+        console.log('Speech recognition started');
+        setIsTranscribing(true);
+      };
+
+      recognition.onresult = (event) => {
+        let interimTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + ' ';
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+        
+        // Update transcript in real-time
+        setRecordingTranscript(finalTranscript + interimTranscript);
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        setIsTranscribing(false);
+      };
+
+      recognition.onend = () => {
+        console.log('Speech recognition ended');
+        setIsTranscribing(false);
+        setRecordingTranscript(finalTranscript.trim());
+      };
 
       mediaRecorder.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
@@ -81,9 +133,16 @@ function VideoDetailPage() {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
         setAudioBlob(audioBlob);
         stream.getTracks().forEach(track => track.stop());
+        
+        // Stop speech recognition
+        if (recognitionRef.current) {
+          recognitionRef.current.stop();
+        }
       };
 
+      // Start both media recording and speech recognition
       mediaRecorder.start();
+      recognition.start();
       setIsRecording(true);
     } catch (error) {
       console.error("Error accessing microphone:", error);
@@ -95,6 +154,11 @@ function VideoDetailPage() {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+    }
+    
+    // Stop speech recognition
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
     }
   };
 
@@ -132,24 +196,28 @@ function VideoDetailPage() {
     setAudioBlob(null);
     setScoringResult(null);
     setTranscript("");
+    setRecordingTranscript("");
+    setIsTranscribing(false);
+    
+    // Stop any ongoing speech recognition
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
   };
 
-  const startVideo = () => {
-    setIsVideoPlaying(true);
-    // YouTube iframe API would be used here in a real implementation
-    // For now, we'll just update the state
-    console.log("Starting video...");
-  };
+  // Video control functions - commented out since we're using native YouTube controls
+  // const startVideo = () => {
+  //   setIsVideoPlaying(true);
+  //   console.log("Starting video...");
+  // };
 
-  const replayVideo = () => {
-    setIsVideoPlaying(false);
-    // Reset video to beginning
-    console.log("Replaying video...");
-    // In a real implementation, this would reset the video to the beginning
-    setTimeout(() => {
-      setIsVideoPlaying(true);
-    }, 100);
-  };
+  // const replayVideo = () => {
+  //   setIsVideoPlaying(false);
+  //   console.log("Replaying video...");
+  //   setTimeout(() => {
+  //     setIsVideoPlaying(true);
+  //   }, 100);
+  // };
 
   return (
     <div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
@@ -196,66 +264,110 @@ function VideoDetailPage() {
         ></iframe>
       </div>
 
-          {/* Video Controls */}
+          {/* Video Instructions */}
           <div style={{ marginTop: "15px" }}>
-            <h4 style={{ marginBottom: "10px", color: "#555" }}>Điều khiển</h4>
-            <div style={{ display: "flex", gap: "10px" }}>
-              <button 
-                onClick={startVideo}
-                style={{
-                  backgroundColor: isVideoPlaying ? "#6c757d" : "#007bff",
-                  color: "white",
-                  border: "none",
-                  padding: "10px 20px",
-                  borderRadius: "5px",
-                  cursor: isVideoPlaying ? "not-allowed" : "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  fontSize: "14px",
-                  fontWeight: "500"
-                }}
-                disabled={isVideoPlaying}
-              >
-                {isVideoPlaying ? "⏸️ Đang phát" : "▶️ Start"}
-              </button>
-              <button 
-                onClick={replayVideo}
-                style={{
-                  backgroundColor: "#28a745",
-                  color: "white",
-                  border: "none",
-                  padding: "10px 20px",
-                  borderRadius: "5px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  fontSize: "14px",
-                  fontWeight: "500"
-                }}
-              >
-                🔄 Phát lại
-              </button>
-            </div>
-            
-            {/* Video Status */}
-            {isVideoPlaying && (
+            <h4 style={{ marginBottom: "10px", color: "#555" }}>Hướng dẫn xem video</h4>
+            <div style={{ 
+              backgroundColor: "#f8f9fa", 
+              padding: "15px", 
+              borderRadius: "8px",
+              border: "1px solid #e9ecef"
+            }}>
               <div style={{ 
-                marginTop: "10px", 
-                padding: "8px 12px", 
-                backgroundColor: "#d4edda", 
-                border: "1px solid #c3e6cb",
-                borderRadius: "4px",
-                color: "#155724",
-                fontSize: "14px",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px"
+                display: "flex", 
+                alignItems: "flex-start", 
+                gap: "12px",
+                marginBottom: "12px"
               }}>
-                🎬 Video đang phát
+                <div style={{ 
+                  fontSize: "18px", 
+                  color: "#007bff",
+                  marginTop: "2px"
+                }}>▶️</div>
+                <div>
+                  <strong style={{ color: "#333", fontSize: "14px" }}>Phát video:</strong>
+                  <p style={{ 
+                    color: "#666", 
+                    fontSize: "13px", 
+                    margin: "4px 0 0 0",
+                    lineHeight: "1.4"
+                  }}>
+                    Nhấn vào nút play ở giữa video để bắt đầu xem
+                  </p>
+                </div>
               </div>
-            )}
+              
+              <div style={{ 
+                display: "flex", 
+                alignItems: "flex-start", 
+                gap: "12px",
+                marginBottom: "12px"
+              }}>
+                <div style={{ 
+                  fontSize: "18px", 
+                  color: "#28a745",
+                  marginTop: "2px"
+                }}>⏸️</div>
+                <div>
+                  <strong style={{ color: "#333", fontSize: "14px" }}>Tạm dừng:</strong>
+                  <p style={{ 
+                    color: "#666", 
+                    fontSize: "13px", 
+                    margin: "4px 0 0 0",
+                    lineHeight: "1.4"
+                  }}>
+                    Nhấn vào video đang phát để tạm dừng, nhấn lại để tiếp tục
+                  </p>
+                </div>
+              </div>
+              
+              <div style={{ 
+                display: "flex", 
+                alignItems: "flex-start", 
+                gap: "12px",
+                marginBottom: "12px"
+              }}>
+                <div style={{ 
+                  fontSize: "18px", 
+                  color: "#ffc107",
+                  marginTop: "2px"
+                }}>🔄</div>
+                <div>
+                  <strong style={{ color: "#333", fontSize: "14px" }}>Phát lại:</strong>
+                  <p style={{ 
+                    color: "#666", 
+                    fontSize: "13px", 
+                    margin: "4px 0 0 0",
+                    lineHeight: "1.4"
+                  }}>
+                    Kéo thanh tiến trình về đầu video để xem lại từ đầu
+                  </p>
+                </div>
+              </div>
+              
+              <div style={{ 
+                display: "flex", 
+                alignItems: "flex-start", 
+                gap: "12px"
+              }}>
+                <div style={{ 
+                  fontSize: "18px", 
+                  color: "#6c757d",
+                  marginTop: "2px"
+                }}>🔊</div>
+                <div>
+                  <strong style={{ color: "#333", fontSize: "14px" }}>Điều chỉnh âm lượng:</strong>
+                  <p style={{ 
+                    color: "#666", 
+                    fontSize: "13px", 
+                    margin: "4px 0 0 0",
+                    lineHeight: "1.4"
+                  }}>
+                    Sử dụng thanh âm lượng ở góc dưới bên phải video
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -342,6 +454,19 @@ function VideoDetailPage() {
                           }}>
                             🔴 Đang ghi âm...
                           </div>
+                          {isTranscribing && (
+                            <div style={{ 
+                              color: "#007bff", 
+                              fontSize: "14px", 
+                              marginBottom: "10px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "8px"
+                            }}>
+                              🎤 Đang chuyển đổi giọng nói thành văn bản...
+                            </div>
+                          )}
                           <button
                             onClick={stopRecording}
                             style={{
@@ -362,7 +487,7 @@ function VideoDetailPage() {
                     <div style={{ textAlign: "center" }}>
                       <div style={{ 
                         color: "#28a745", 
-                        marginBottom: "10px",
+                        marginBottom: "15px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -370,6 +495,46 @@ function VideoDetailPage() {
                       }}>
                         ✅ Đã ghi âm xong
                       </div>
+                      
+                      {/* Transcript Text Box */}
+                      {recordingTranscript && (
+                        <div style={{ marginBottom: "20px" }}>
+                          <h5 style={{ 
+                            color: "#333", 
+                            marginBottom: "8px", 
+                            textAlign: "left",
+                            fontSize: "14px",
+                            fontWeight: "600"
+                          }}>
+                            📝 Transcript của bạn:
+                          </h5>
+                          <div style={{
+                            backgroundColor: "#f8f9fa",
+                            border: "1px solid #e9ecef",
+                            borderRadius: "6px",
+                            padding: "12px",
+                            textAlign: "left",
+                            minHeight: "60px",
+                            fontSize: "14px",
+                            lineHeight: "1.5",
+                            color: "#495057",
+                            fontStyle: "italic",
+                            whiteSpace: "pre-wrap",
+                            wordWrap: "break-word"
+                          }}>
+                            "{recordingTranscript}"
+                          </div>
+                          <p style={{
+                            fontSize: "12px",
+                            color: "#6c757d",
+                            marginTop: "6px",
+                            textAlign: "left"
+                          }}>
+                            💡 Transcript được tạo tự động từ giọng nói của bạn
+                          </p>
+                        </div>
+                      )}
+                      
                       <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
                         <button
                           onClick={submitAudio}
