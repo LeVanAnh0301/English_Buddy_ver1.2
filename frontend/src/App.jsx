@@ -4,6 +4,8 @@ import VideoListPage from "./VideoListPage";
 import VideoDetailPage from "./VideoDetailPage";
 import HomePage from "./components/HomePage";
 import Navbar from "./components/Navbar"; 
+import Footer from "./components/Footer";
+import WordSpeakingPage from "./WordSpeakingPage";
 import "./App.css";
 
 function App() {
@@ -17,7 +19,11 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/videos" element={<VideoListPage />} />
         <Route path="/video/:id" element={<VideoDetailPage />} />
+        <Route path="/word-speaking" element={<WordSpeakingPage />} />
       </Routes>
+
+      {/* Footer luôn hiển thị */}
+      <Footer />
     </Router>
   );
 }

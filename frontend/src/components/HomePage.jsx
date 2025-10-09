@@ -14,7 +14,7 @@ function HomePage() {
       {/* Hero section */}
       <section className="hero">
         <div className="hero-content">
-          <span className="badge">🐦 Nền tảng học tiếng Anh AI</span>
+          {/* <span className="badge">🐦 Nền tảng học tiếng Anh AI</span> */}
           <h1>Học tiếng Anh thông minh cho học sinh Việt Nam</h1>
           <p>Luyện nói, đọc, viết và ngữ pháp cùng chú vẹt AI thông minh!</p>
           <div className="hero-buttons">

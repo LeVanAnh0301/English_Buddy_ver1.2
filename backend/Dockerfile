@@ -7,6 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
     build-essential \
     default-libmysqlclient-dev \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # ✅ Làm việc ở thư mục gốc dự án
