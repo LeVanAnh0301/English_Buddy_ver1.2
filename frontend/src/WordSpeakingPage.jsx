@@ -432,8 +432,7 @@ function DictionaryInfo({ targetWord }) {
 
     setLoading(true);
     setErr("");
-    setTranslation("");
-
+    
     fetch(
       `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(
         trimmedWord
@@ -453,34 +452,36 @@ function DictionaryInfo({ targetWord }) {
     return () => controller.abort();
   }, [targetWord]);
   
-  // --- EFFECT MỚI ĐỂ GỌI API DỊCH ---
   useEffect(() => {
-    if (data && data.meanings?.[0]?.definitions?.[0]?.definition) {
-      const definitionToTranslate = data.meanings[0].definitions[0].definition;
-      setTranslationLoading(true);
-      
-      const controller = new AbortController();
-      const { signal } = controller;
-
-      fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(definitionToTranslate)}&langpair=en|vi`, { signal })
-        .then(res => res.json())
-        .then(translationData => {
-          if (translationData.responseData) {
-            setTranslation(translationData.responseData.translatedText);
-          }
-        })
-        .catch(err => {
-          if (err.name !== 'AbortError') {
-            console.error("Lỗi dịch:", err);
-          }
-        })
-        .finally(() => {
-          setTranslationLoading(false);
-        });
-
-      return () => controller.abort();
+    const trimmedWord = targetWord ? targetWord.trim() : "";
+    if (!trimmedWord) {
+      setTranslation("");
+      return;
     }
-  }, [data]);
+
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    setTranslationLoading(true);
+    
+    fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(trimmedWord)}&langpair=en|vi`, { signal })
+      .then(res => res.json())
+      .then(translationData => {
+        if (translationData.responseData) {
+          setTranslation(translationData.responseData.translatedText);
+        }
+      })
+      .catch(err => {
+        if (err.name !== 'AbortError') {
+          console.error("Lỗi dịch:", err);
+        }
+      })
+      .finally(() => {
+        setTranslationLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [targetWord]);
 
 
   if (!targetWord || !targetWord.trim()) return null;
@@ -548,7 +549,7 @@ function DictionaryInfo({ targetWord }) {
                 {translationLoading && <div className="translation-loading">Đang dịch...</div>}
                 {translation && !translationLoading && (
                   <div className="translation-text">
-                    <strong>Nghĩa Tiếng Việt:</strong> {translation}
+                    <strong>Dịch:</strong> {translation}
                   </div>
                 )}
               </div>
