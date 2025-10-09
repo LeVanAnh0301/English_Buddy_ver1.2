@@ -1,0 +1,35 @@
+.site-footer {
+  margin-top: 40px;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 40px 20px;
+}
+.footer-inner { max-width: 1000px; margin: 0 auto; }
+
+.contact-block h3 { margin: 0 0 6px; }
+.contact-block p { color: #94a3b8; margin: 0 0 12px; }
+
+.contact-form { background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 16px; }
+.contact-form .form-row { display: flex; gap: 10px; margin-bottom: 10px; }
+.contact-form input, .contact-form textarea {
+  flex: 1;
+  background: #0b1220;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.footer-submit {
+  margin-top: 8px;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+.footer-submit:hover { background: #1d4ed8; }
+
+.copyright { margin-top: 16px; color: #94a3b8; font-size: 14px; }
+
+

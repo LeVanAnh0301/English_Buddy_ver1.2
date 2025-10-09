@@ -85,15 +85,20 @@ function Navbar() {
           </a>
         </li>
         <li>
-          <a href="#features" onClick={handleNavClick("features")} className={active === "features" ? "active" : undefined}>
-            Tính năng
+          <a href="/word-speaking" onClick={(e) => { e.preventDefault(); navigate('/word-speaking'); }}>
+            Luyện từ
           </a>
         </li>
         <li>
+          <a href="/videos" onClick={(e) => { e.preventDefault(); navigate('/videos'); }}>
+            Luyện nói
+          </a>
+        </li>
+        {/* <li>
           <a href="#about" onClick={handleNavClick("about")} className={active === "about" ? "active" : undefined}>
             Giới thiệu
           </a>
-        </li>
+        </li> */}
         <li>
           <a href="#contact" onClick={handleNavClick("contact")} className={active === "contact" ? "active" : undefined}>
             Liên hệ

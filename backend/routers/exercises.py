@@ -10,6 +10,7 @@ import tempfile
 import speech_recognition as sr
 from pydantic import BaseModel
 from typing import Optional
+from difflib import SequenceMatcher
 
 router = APIRouter()
 
@@ -276,3 +277,123 @@ def generate_speaking_feedback(score: int, transcript: str) -> str:
         return f"Not bad! Keep practicing. Focus on speaking more slowly and clearly. Transcript: '{transcript}'"
     else:
         return f"Keep practicing! Try to speak more clearly and use complete sentences. Transcript: '{transcript}'"
+
+
+# =====================
+# Word-level speaking practice
+# =====================
+
+class WordSpeakingRequest(BaseModel):
+    target_word: str
+
+class WordSpeakingResponse(BaseModel):
+    target_word: str
+    recognized_text: str
+    similarity: float
+    score: int
+    feedback: str
+    alignment: list[dict]  # [{op, target, recog} per step]
+    mistakes: list[dict]   # compact mistake spans for UI
+
+def _similarity(a: str, b: str) -> float:
+    return SequenceMatcher(None, a.lower().strip(), b.lower().strip()).ratio()
+
+@router.post("/word_speaking_score/", response_model=WordSpeakingResponse)
+async def word_speaking_score(
+    audio: UploadFile = File(...),
+    target_word: str = Form(...),
+):
+    """Accepts short audio of a single word and scores pronunciation similarity.
+
+    Frontend may upload webm/ogg; we convert to wav if necessary before ASR.
+    """
+    try:
+        # Save uploaded audio
+        with tempfile.NamedTemporaryFile(delete=False) as temp_in:
+            content = await audio.read()
+            temp_in.write(content)
+            temp_in_path = temp_in.name
+
+        # Convert to wav when not wav
+        input_filename = getattr(audio, 'filename', '') or ''
+        needs_convert = not (input_filename.lower().endswith('.wav'))
+
+        temp_wav_path = None
+        if needs_convert:
+            # Lazy import to avoid hard dependency if not used
+            from pydub import AudioSegment
+            temp_wav = tempfile.NamedTemporaryFile(delete=False, suffix='.wav')
+            temp_wav_path = temp_wav.name
+            temp_wav.close()
+            seg = AudioSegment.from_file(temp_in_path)
+            seg.export(temp_wav_path, format='wav')
+            source_path = temp_wav_path
+        else:
+            source_path = temp_in_path
+
+        recognizer = sr.Recognizer()
+        with sr.AudioFile(source_path) as src:
+            audio_data = recognizer.record(src)
+            try:
+                recognized = recognizer.recognize_google(audio_data, language="en-US")
+            except sr.UnknownValueError:
+                recognized = ""
+            except sr.RequestError:
+                recognized = ""
+
+        # Cleanup temp files
+        try:
+            os.unlink(temp_in_path)
+        except Exception:
+            pass
+        if temp_wav_path:
+            try:
+                os.unlink(temp_wav_path)
+            except Exception:
+                pass
+
+        sim = _similarity(recognized, target_word) if recognized else 0.0
+        score = int(round(sim * 100))
+        if score >= 85:
+            fb = "Phát âm rất tốt!" \
+                 " Tiếp tục duy trì."
+        elif score >= 65:
+            fb = "Khá ổn! Cố gắng nhấn âm và kéo dài nguyên âm rõ hơn."
+        elif score >= 40:
+            fb = "Cần cải thiện. Hãy nói chậm hơn và tách rõ âm đầu/cuối."
+        else:
+            fb = "Hãy thử lại. Hãy nghe mẫu và bắt chước nhấn âm chính."
+
+        # Build per-character alignment to indicate mistakes
+        sm = SequenceMatcher(None, target_word.strip(), (recognized or "").strip())
+        opcodes = sm.get_opcodes()
+        alignment = []
+        mistakes = []
+        for tag, i1, i2, j1, j2 in opcodes:
+            tgt_seg = target_word[i1:i2]
+            rec_seg = (recognized or "")[j1:j2]
+            alignment.append({
+                "op": tag,  # equal, replace, insert (in recog), delete (in target)
+                "target": tgt_seg,
+                "recog": rec_seg,
+            })
+            if tag != "equal":
+                mistakes.append({
+                    "op": tag,
+                    "target_segment": tgt_seg,
+                    "recognized_segment": rec_seg,
+                    "target_range": [i1, i2],
+                    "recognized_range": [j1, j2]
+                })
+
+        return WordSpeakingResponse(
+            target_word=target_word,
+            recognized_text=recognized,
+            similarity=round(sim, 3),
+            score=score,
+            feedback=fb,
+            alignment=alignment,
+            mistakes=mistakes,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error scoring word speaking: {str(e)}")
