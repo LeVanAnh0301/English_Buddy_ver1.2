@@ -163,29 +163,30 @@ function VideoDetailPage() {
   };
 
   const submitAudio = async () => {
-    if (!audioBlob) return;
+    if (!audioBlob || !exercise) return;
 
     setIsProcessing(true);
     try {
-      const formData = new FormData();
-      formData.append('audio', audioBlob, 'recording.wav');
-      formData.append('exercise_id', exercise.id);
-      formData.append('user_id', 1); // Replace with actual user ID
-
-      const response = await axios.post('http://localhost:8000/exercises/score_speaking/', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      // Use the new speaking answer scoring API
+      const response = await axios.post('http://localhost:8000/exercises/score_speaking_answer/', {
+        question: exercise.question,
+        expected_keywords: exercise.expectedKeywords || [],
+        user_answer: recordingTranscript || ""
       });
 
       setScoringResult(response.data);
-      setTranscript(response.data.transcript || "");
+      setTranscript(recordingTranscript || "");
     } catch (error) {
       console.error("Error scoring audio:", error);
       setScoringResult({
         score: 0,
         feedback: "Có lỗi xảy ra khi chấm điểm. Vui lòng thử lại.",
-        transcript: ""
+        transcript: recordingTranscript || "",
+        keyword_matches: [],
+        missing_keywords: exercise?.expectedKeywords || [],
+        grammar_score: 0,
+        fluency_score: 0,
+        suggestions: ["Thử lại", "Nói rõ hơn", "Sử dụng từ khóa liên quan"]
       });
     } finally {
       setIsProcessing(false);
@@ -223,7 +224,7 @@ function VideoDetailPage() {
     <div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
       <div style={{ display: "flex", gap: "20px", marginBottom: "20px" }}>
         <Link 
-          to="/" 
+          to="/videos" 
           style={{
             backgroundColor: "#007bff",
             color: "white",
@@ -597,6 +598,80 @@ function VideoDetailPage() {
                       </div>
                     </div>
 
+                    {/* Detailed scoring breakdown */}
+                    <div style={{ marginBottom: "15px" }}>
+                      <h5 style={{ color: "#333", marginBottom: "8px" }}>Chi tiết điểm:</h5>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "14px" }}>
+                        <div style={{ 
+                          backgroundColor: "#f8f9fa", 
+                          padding: "8px", 
+                          borderRadius: "4px",
+                          border: "1px solid #e9ecef"
+                        }}>
+                          <strong>Ngữ pháp:</strong> {scoringResult.grammar_score || 0}/20
+                        </div>
+                        <div style={{ 
+                          backgroundColor: "#f8f9fa", 
+                          padding: "8px", 
+                          borderRadius: "4px",
+                          border: "1px solid #e9ecef"
+                        }}>
+                          <strong>Độ trôi chảy:</strong> {scoringResult.fluency_score || 0}/10
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Keyword analysis */}
+                    {scoringResult.keyword_matches && scoringResult.keyword_matches.length > 0 && (
+                      <div style={{ marginBottom: "15px" }}>
+                        <h5 style={{ color: "#333", marginBottom: "8px" }}>Từ khóa đã sử dụng:</h5>
+                        <div style={{ 
+                          backgroundColor: "#d4edda", 
+                          padding: "10px", 
+                          borderRadius: "4px",
+                          border: "1px solid #c3e6cb"
+                        }}>
+                          {scoringResult.keyword_matches.map((keyword, index) => (
+                            <span key={index} style={{ 
+                              backgroundColor: "#28a745", 
+                              color: "white", 
+                              padding: "2px 6px", 
+                              borderRadius: "3px", 
+                              marginRight: "5px",
+                              fontSize: "12px"
+                            }}>
+                              {keyword}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {scoringResult.missing_keywords && scoringResult.missing_keywords.length > 0 && (
+                      <div style={{ marginBottom: "15px" }}>
+                        <h5 style={{ color: "#333", marginBottom: "8px" }}>Từ khóa cần sử dụng:</h5>
+                        <div style={{ 
+                          backgroundColor: "#f8d7da", 
+                          padding: "10px", 
+                          borderRadius: "4px",
+                          border: "1px solid #f5c6cb"
+                        }}>
+                          {scoringResult.missing_keywords.slice(0, 5).map((keyword, index) => (
+                            <span key={index} style={{ 
+                              backgroundColor: "#dc3545", 
+                              color: "white", 
+                              padding: "2px 6px", 
+                              borderRadius: "3px", 
+                              marginRight: "5px",
+                              fontSize: "12px"
+                            }}>
+                              {keyword}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {transcript && (
                       <div style={{ marginBottom: "15px" }}>
                         <h5 style={{ color: "#333", marginBottom: "8px" }}>Transcript của bạn:</h5>
@@ -612,7 +687,7 @@ function VideoDetailPage() {
                       </div>
                     )}
 
-                    <div>
+                    <div style={{ marginBottom: "15px" }}>
                       <h5 style={{ color: "#333", marginBottom: "8px" }}>Nhận xét:</h5>
                       <div style={{ 
                         backgroundColor: "#e7f3ff", 
@@ -623,6 +698,26 @@ function VideoDetailPage() {
                         {scoringResult.feedback}
                       </div>
                     </div>
+
+                    {/* Suggestions */}
+                    {scoringResult.suggestions && scoringResult.suggestions.length > 0 && (
+                      <div style={{ marginBottom: "15px" }}>
+                        <h5 style={{ color: "#333", marginBottom: "8px" }}>Gợi ý cải thiện:</h5>
+                        <ul style={{ 
+                          backgroundColor: "#fff3cd", 
+                          padding: "10px 20px", 
+                          borderRadius: "4px",
+                          border: "1px solid #ffeaa7",
+                          margin: 0
+                        }}>
+                          {scoringResult.suggestions.map((suggestion, index) => (
+                            <li key={index} style={{ marginBottom: "4px", fontSize: "14px" }}>
+                              {suggestion}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
                     <div style={{ marginTop: "15px", textAlign: "center" }}>
                       <button

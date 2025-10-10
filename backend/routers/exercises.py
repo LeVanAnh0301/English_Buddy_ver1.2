@@ -295,6 +295,20 @@ class WordSpeakingResponse(BaseModel):
     alignment: list[dict]  # [{op, target, recog} per step]
     mistakes: list[dict]   # compact mistake spans for UI
 
+class SpeakingAnswerRequest(BaseModel):
+    question: str
+    expected_keywords: list[str]
+    user_answer: str
+
+class SpeakingAnswerResponse(BaseModel):
+    score: int
+    feedback: str
+    keyword_matches: list[str]
+    missing_keywords: list[str]
+    grammar_score: int
+    fluency_score: int
+    suggestions: list[str]
+
 def _similarity(a: str, b: str) -> float:
     return SequenceMatcher(None, a.lower().strip(), b.lower().strip()).ratio()
 
@@ -397,3 +411,120 @@ async def word_speaking_score(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error scoring word speaking: {str(e)}")
+
+
+@router.post("/score_speaking_answer/", response_model=SpeakingAnswerResponse)
+async def score_speaking_answer(request: SpeakingAnswerRequest):
+    """Score a speaking answer based on question, expected keywords, and user response.
+    
+    Uses free algorithms: keyword matching, text similarity, basic grammar checks.
+    No external API calls to minimize costs.
+    """
+    try:
+        question = request.question.lower().strip()
+        expected_keywords = [kw.lower().strip() for kw in request.expected_keywords]
+        user_answer = request.user_answer.lower().strip()
+        
+        if not user_answer or len(user_answer) < 3:
+            return SpeakingAnswerResponse(
+                score=0,
+                feedback="Câu trả lời quá ngắn. Hãy cố gắng nói dài hơn và chi tiết hơn.",
+                keyword_matches=[],
+                missing_keywords=expected_keywords,
+                grammar_score=0,
+                fluency_score=0,
+                suggestions=["Nói chậm hơn", "Sử dụng câu đầy đủ", "Thêm chi tiết"]
+            )
+        
+        # 1. Keyword matching (40% of score)
+        found_keywords = []
+        missing_keywords = []
+        for keyword in expected_keywords:
+            if keyword in user_answer:
+                found_keywords.append(keyword)
+            else:
+                missing_keywords.append(keyword)
+        
+        keyword_score = (len(found_keywords) / len(expected_keywords)) * 40 if expected_keywords else 0
+        
+        # 2. Text length and structure (30% of score)
+        word_count = len(user_answer.split())
+        if word_count < 5:
+            length_score = 10
+        elif word_count < 10:
+            length_score = 20
+        elif word_count < 20:
+            length_score = 25
+        else:
+            length_score = 30
+        
+        # 3. Basic grammar indicators (20% of score)
+        grammar_indicators = [
+            user_answer.count('.') > 0,  # Has sentences
+            any(word in user_answer for word in ['the', 'a', 'an']),  # Articles
+            any(word in user_answer for word in ['is', 'are', 'was', 'were']),  # Verbs
+            user_answer.count(',') > 0,  # Has commas
+        ]
+        grammar_score = sum(grammar_indicators) * 5  # 0-20 points
+        
+        # 4. Fluency indicators (10% of score)
+        fluency_indicators = [
+            len(user_answer.split()) > 8,  # Sufficient length
+            not any(word * 3 in user_answer for word in ['um', 'uh', 'er']),  # No excessive fillers
+            user_answer.count(' ') > 3,  # Multiple words
+        ]
+        fluency_score = sum(fluency_indicators) * 3.33  # 0-10 points
+        
+        # Calculate total score
+        total_score = int(keyword_score + length_score + grammar_score + fluency_score)
+        total_score = min(total_score, 100)  # Cap at 100
+        
+        # Generate feedback
+        feedback_parts = []
+        
+        if total_score >= 80:
+            feedback_parts.append("Tuyệt vời! Câu trả lời của bạn rất tốt.")
+        elif total_score >= 60:
+            feedback_parts.append("Tốt! Bạn đã trả lời khá ổn.")
+        elif total_score >= 40:
+            feedback_parts.append("Khá ổn, nhưng cần cải thiện thêm.")
+        else:
+            feedback_parts.append("Cần cải thiện nhiều hơn.")
+        
+        if found_keywords:
+            feedback_parts.append(f"Bạn đã sử dụng các từ khóa: {', '.join(found_keywords)}.")
+        
+        if missing_keywords:
+            feedback_parts.append(f"Hãy thử sử dụng: {', '.join(missing_keywords[:3])}.")
+        
+        if word_count < 10:
+            feedback_parts.append("Hãy cố gắng nói dài hơn và chi tiết hơn.")
+        
+        if grammar_score < 10:
+            feedback_parts.append("Cố gắng sử dụng câu đầy đủ với chủ ngữ và vị ngữ.")
+        
+        # Generate suggestions
+        suggestions = []
+        if len(found_keywords) < len(expected_keywords) * 0.5:
+            suggestions.append("Sử dụng nhiều từ khóa liên quan hơn")
+        if word_count < 15:
+            suggestions.append("Mở rộng câu trả lời với nhiều chi tiết")
+        if grammar_score < 15:
+            suggestions.append("Chú ý ngữ pháp và cấu trúc câu")
+        if fluency_score < 7:
+            suggestions.append("Nói chậm và rõ ràng hơn")
+        
+        feedback = " ".join(feedback_parts)
+        
+        return SpeakingAnswerResponse(
+            score=total_score,
+            feedback=feedback,
+            keyword_matches=found_keywords,
+            missing_keywords=missing_keywords,
+            grammar_score=int(grammar_score),
+            fluency_score=int(fluency_score),
+            suggestions=suggestions
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error scoring speaking answer: {str(e)}")
