@@ -6,6 +6,7 @@ function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [active, setActive] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const scrollToSection = useCallback((sectionId) => {
     const doScroll = () => {
@@ -25,6 +26,7 @@ function Navbar() {
 
   const handleNavClick = (target) => (e) => {
     e.preventDefault();
+    setMobileMenuOpen(false); // Close mobile menu when navigating
     if (target === "home") {
       if (location.pathname !== "/") {
         navigate("/");
@@ -34,6 +36,12 @@ function Navbar() {
       return;
     }
     scrollToSection(target);
+  };
+
+  const handleDirectNav = (path) => (e) => {
+    e.preventDefault();
+    setMobileMenuOpen(false); // Close mobile menu when navigating
+    navigate(path);
   };
 
   useEffect(() => {
@@ -78,27 +86,27 @@ function Navbar() {
       </div>
 
       {/* Menu giữa */}
-      <ul className="navbar-menu">
+      <ul className={`navbar-menu ${mobileMenuOpen ? 'active' : ''}`}>
         <li>
           <a href="#home" onClick={handleNavClick("home")} className={active === "home" ? "active" : undefined}>
             Trang chủ
           </a>
         </li>
         <li>
-          <a href="/word-speaking" onClick={(e) => { e.preventDefault(); navigate('/word-speaking'); }}>
+          <a href="/word-speaking" onClick={handleDirectNav('/word-speaking')}>
             Luyện từ
           </a>
         </li>
         <li>
-          <a href="/videos" onClick={(e) => { e.preventDefault(); navigate('/videos'); }}>
-            Luyện nói
+          <a href="/videos" onClick={handleDirectNav('/videos')}>
+            Học nói
           </a>
         </li>
-        {/* <li>
+        <li>
           <a href="#about" onClick={handleNavClick("about")} className={active === "about" ? "active" : undefined}>
             Giới thiệu
           </a>
-        </li> */}
+        </li>
         <li>
           <a href="#contact" onClick={handleNavClick("contact")} className={active === "contact" ? "active" : undefined}>
             Liên hệ
@@ -112,6 +120,17 @@ function Navbar() {
           🌐 EN
         </button>
         {/* <button className="demo-btn">Đặt lịch Demo</button> */}
+        
+        {/* Mobile Menu Toggle */}
+        <button 
+          className={`mobile-menu-toggle ${mobileMenuOpen ? 'active' : ''}`}
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-label="Toggle mobile menu"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
       </div>
     </nav>
   );

@@ -17,6 +17,63 @@ html {
   padding: 60px 100px;
 }
 
+/* Responsive Hero */
+@media (max-width: 1024px) {
+  .hero {
+    padding: 50px 60px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero {
+    flex-direction: column;
+    text-align: center;
+    padding: 40px 30px;
+    gap: 30px;
+  }
+  
+  .hero-content {
+    max-width: 100%;
+  }
+  
+  .hero-content h1 {
+    font-size: 32px;
+  }
+  
+  .hero-content p {
+    font-size: 16px;
+  }
+  
+  .hero-buttons {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .hero-buttons button {
+    margin-right: 0;
+    width: 100%;
+    max-width: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero {
+    padding: 30px 20px;
+  }
+  
+  .hero-content h1 {
+    font-size: 28px;
+  }
+  
+  .hero-content p {
+    font-size: 14px;
+  }
+  
+  .hero-logo img {
+    width: 150px;
+  }
+}
+
 .hero-content {
   max-width: 600px;
 }
@@ -68,6 +125,42 @@ html {
   padding: 60px 40px;
 }
 
+/* Responsive How it works */
+@media (max-width: 768px) {
+  .how-it-works {
+    padding: 40px 20px;
+  }
+  
+  .how-it-works h2 {
+    font-size: 28px;
+  }
+  
+  .steps {
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  
+  .step-card {
+    width: 100%;
+    max-width: 400px;
+  }
+}
+
+@media (max-width: 480px) {
+  .how-it-works {
+    padding: 30px 16px;
+  }
+  
+  .how-it-works h2 {
+    font-size: 24px;
+  }
+  
+  .step-card {
+    padding: 16px;
+  }
+}
+
 .steps {
   display: flex;
   justify-content: center;
@@ -88,6 +181,36 @@ html {
 .about {
   background: #f0f9ff; /* pastel, very light blue/green tone */
   padding: 60px 40px;
+}
+
+/* Responsive About */
+@media (max-width: 768px) {
+  .about {
+    padding: 40px 20px;
+  }
+  
+  .about h2 {
+    font-size: 28px;
+  }
+  
+  .about-highlights {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .about-highlights li {
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .about {
+    padding: 30px 16px;
+  }
+  
+  .about h2 {
+    font-size: 24px;
+  }
 }
 
 .about-inner {
@@ -125,6 +248,36 @@ html {
 /* Contact */
 .contact {
   padding: 60px 40px;
+}
+
+/* Responsive Contact */
+@media (max-width: 768px) {
+  .contact {
+    padding: 40px 20px;
+  }
+  
+  .contact h2 {
+    font-size: 28px;
+  }
+  
+  .contact-form .form-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .contact {
+    padding: 30px 16px;
+  }
+  
+  .contact h2 {
+    font-size: 24px;
+  }
+  
+  .contact-form {
+    padding: 16px;
+  }
 }
 
 .contact-inner {

@@ -7,6 +7,22 @@
   padding: 24px;
 }
 
+/* Responsive Word Page */
+@media (max-width: 768px) {
+  .word-page {
+    padding: 16px;
+    align-items: flex-start;
+    padding-top: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .word-page {
+    padding: 12px;
+    padding-top: 20px;
+  }
+}
+
 .animated-bg {
   position: absolute;
   inset: 0;
@@ -34,6 +50,21 @@
   box-shadow: 0 10px 24px rgba(2,6,23,0.06);
 }
 
+/* Responsive Word Container */
+@media (max-width: 768px) {
+  .word-container {
+    padding: 20px;
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .word-container {
+    padding: 16px;
+    border-radius: 8px;
+  }
+}
+
 .title { margin: 0; }
 .subtitle { color: #475569; margin-top: 6px; }
 
@@ -42,6 +73,29 @@
   gap: 12px;
   margin-top: 16px;
   margin-bottom: 16px;
+}
+
+/* Responsive Controls */
+@media (max-width: 768px) {
+  .controls-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .text-input {
+    width: 100%;
+  }
+  
+  .btn-record, .btn-stop, .btn-score {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .controls-row {
+    gap: 8px;
+  }
 }
 
 .text-input {

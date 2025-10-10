@@ -6,6 +6,32 @@
 }
 .footer-inner { max-width: 1000px; margin: 0 auto; }
 
+/* Responsive Footer */
+@media (max-width: 768px) {
+  .site-footer {
+    padding: 30px 16px;
+  }
+  
+  .contact-form .form-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .site-footer {
+    padding: 24px 12px;
+  }
+  
+  .contact-block h3 {
+    font-size: 18px;
+  }
+  
+  .contact-form {
+    padding: 12px;
+  }
+}
+
 .contact-block h3 { margin: 0 0 6px; }
 .contact-block p { color: #94a3b8; margin: 0 0 12px; }
 

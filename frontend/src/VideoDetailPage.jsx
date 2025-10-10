@@ -221,8 +221,18 @@ function VideoDetailPage() {
   // };
 
   return (
-    <div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
-      <div style={{ display: "flex", gap: "20px", marginBottom: "20px" }}>
+    <div style={{ 
+      padding: "20px", 
+      maxWidth: "1200px", 
+      margin: "0 auto",
+      minHeight: "100vh"
+    }}>
+      <div style={{ 
+        display: "flex", 
+        gap: "20px", 
+        marginBottom: "20px",
+        flexWrap: "wrap"
+      }}>
         <Link 
           to="/videos" 
           style={{
@@ -244,9 +254,17 @@ function VideoDetailPage() {
         </Link>
       </div>
 
-      <div style={{ display: "flex", gap: "20px" }}>
+      <div style={{ 
+        display: "flex", 
+        gap: "20px",
+        flexWrap: "wrap"
+      }}>
         {/* Left Panel - Video */}
-        <div style={{ flex: "1", minWidth: "500px" }}>
+        <div style={{ 
+          flex: "1", 
+          minWidth: "300px",
+          width: "100%"
+        }}>
           <h3 style={{ marginBottom: "15px", color: "#333" }}>Video</h3>
           <div style={{ 
             backgroundColor: "#f5f5f5", 
@@ -261,7 +279,12 @@ function VideoDetailPage() {
           title="YouTube video player"
           frameBorder="0"
           allowFullScreen
-              style={{ borderRadius: "4px" }}
+              style={{ 
+                borderRadius: "4px",
+                maxWidth: "100%",
+                height: "auto",
+                aspectRatio: "16/9"
+              }}
         ></iframe>
       </div>
 
@@ -373,7 +396,11 @@ function VideoDetailPage() {
         </div>
 
         {/* Right Panel - Speaking Exercise */}
-        <div style={{ flex: "1", minWidth: "400px" }}>
+        <div style={{ 
+          flex: "1", 
+          minWidth: "300px",
+          width: "100%"
+        }}>
           <h3 style={{ marginBottom: "15px", color: "#333" }}>Bài tập Speaking</h3>
           
           <div style={{ 
