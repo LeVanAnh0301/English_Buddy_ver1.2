@@ -17,3 +17,6 @@ youtube-transcript-api
 requests
 openai
 python-dotenv==1.1.1
+SpeechRecognition==3.10.0
+pyaudio==0.2.11
+pydub==0.25.1
