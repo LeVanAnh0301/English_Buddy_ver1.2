@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+
+  api:
+    build:
+      context: ./backend 
+    container_name: english_buddy_api
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      PYTHONPATH: /app/backend:/app
+    ports:
+      - "8000:8000" 
+    volumes:
+      - .:/app         
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: english_buddy_frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - api
+    restart: unless-stopped
+
