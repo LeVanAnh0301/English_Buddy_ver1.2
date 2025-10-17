@@ -8,7 +8,6 @@ venv
 .build
 .dist
 node_modules
-frontend
 .git
 .gitignore
 README.md
