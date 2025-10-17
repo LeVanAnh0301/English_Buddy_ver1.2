@@ -5,10 +5,10 @@ from backend import models
 from fastapi.middleware.cors import CORSMiddleware
 from backend.database import SessionLocal, engine, Base, DATABASE_URL
 from sqlalchemy.orm import Session
-from backend.routers import exercises
+from backend.routers import exercises, video_router, speaking_router, ai_question_router, listening_router, ai_eval_router
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
-import time
+import time 
 from sqlalchemy.engine.url import make_url, URL
 from sqlalchemy import create_engine as sa_create_engine
 
@@ -20,60 +20,69 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-@app.on_event("startup")
-async def run_migrations_on_startup() -> None:
-    """Create tables from models after DB is reachable.
 
-    Retries for a short period to avoid race conditions on container startup.
-    """
-    max_attempts = 10
-    # Ensure target schema/database exists (MySQL: schema == database)
+def init_db_data():
+    """Initialize fake data for ListeningSource table if empty"""
+    db = SessionLocal()
     try:
-        parsed_url = make_url(DATABASE_URL)
-        server_url = URL.create(
-            drivername=parsed_url.drivername,
-            username=parsed_url.username,
-            password=parsed_url.password,
-            host=parsed_url.host,
-            port=parsed_url.port,
-        )
-        schema_name = parsed_url.database
-        if schema_name:
-            with sa_create_engine(server_url).connect() as server_conn:
-                server_conn.execute(text(
-                    f"CREATE DATABASE IF NOT EXISTS `{schema_name}` \
-                    DEFAULT CHARACTER SET utf8mb4 \
-                    COLLATE utf8mb4_unicode_ci"
-                ))
-    except Exception:
-        # If we fail to ensure DB, let the retry loop handle connectivity
-        pass
+        # Check if table has data
+        if not db.query(models.ListeningSource).first():
+            sample_data = [
+                models.ListeningSource(
+                    url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",  # full YouTube URL
+                    title="English Listening - Daily Conversation",
+                    youtube_video_id="dQw4w9WgXcQ",
+                    transcript="""
+                    A: Hi, how are you today?
+                    B: I'm good, thanks! How about you?
+                    A: Not bad. What are your plans for the weekend?
+                    B: I'm going to visit my parents.
+                    """
+                ),
+                models.ListeningSource(
+                    url="https://www.youtube.com/watch?v=_DmYA7OzyRE",
+                    title="Speaking Practice - Travel Roleplay",
+                    youtube_video_id="_DmYA7OzyRE",
+                    transcript="""
+                    A: Excuse me, where is the nearest train station?
+                    B: It's just two blocks away on the left.
+                    A: Thank you very much!
+                    B: You're welcome!
+                    """
+                ),
+                models.ListeningSource(
+                    url="https://www.youtube.com/watch?v=M7lc1UVf-VE",
+                    title="Learn Loops in Computer Science",
+                    youtube_video_id="M7lc1UVf-VE",
+                    transcript="""
+                    for i in range(5):
+                        print("Hello, world!")
+                    # This loop prints the message five times.
+                    """
+                )
+            ]
 
-    for attempt in range(1, max_attempts + 1):
-        try:
-            # Ensure connection is alive before creating tables
-            with engine.connect() as connection:
-                connection.execute(text("SELECT 1"))
-            models.Base.metadata.create_all(bind=engine)
-            break
-        except OperationalError:
-            if attempt == max_attempts:
-                raise
-            time.sleep(2)
+            db.add_all(sample_data)
+            db.commit()
+            print("Dữ liệu mẫu ListeningSource đã được thêm vào database.")
+        else:
+            print("ℹDữ liệu mẫu ListeningSource đã tồn tại, bỏ qua thêm mới.")
+    except Exception as e:
+        db.rollback()
+        print(f"Lỗi khi khởi tạo dữ liệu mẫu: {e}")
+    finally:
+        db.close()
 
-# app.include_router(sources.router, prefix="/sources", tags=["sources"])
-app.include_router(exercises.router, prefix="/exercises", tags=["exercises"])
-# app.include_router(submissions.router, prefix="/submissions", tags=["submissions"]) 
+@app.on_event("startup")
+def on_startup():
+    init_db_data()
 
-class PostBase(BaseModel):
-    title: str
-    content: str
-    user_id: int
-
-class UserBase(BaseModel):
-    name: str
-    email: str
-    is_active: bool = True
+app.include_router(video_router.router, prefix="/api/videos", tags=["Videos"])
+# app.include_router(exercises.router, prefix="/api/exercises", tags=["Exercises"])
+app.include_router(speaking_router.router, prefix="/api/speaking", tags=["Speaking"])
+app.include_router(listening_router.router, prefix="/api/listening", tags=["Listening"])
+app.include_router(ai_question_router.router, prefix="/api/ai/questions", tags=["AI Question Generator"])
+app.include_router(ai_eval_router.router, prefix="/api/ai/eval", tags=["AI Evaluation"])
 
 def get_db():
     db = SessionLocal()
