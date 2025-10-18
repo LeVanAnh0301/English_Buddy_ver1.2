@@ -75,6 +75,20 @@ class SpeakingQuestionCreate(SpeakingQuestionBase):
 class SpeakingQuestionResponse(SpeakingQuestionBase, BaseSchema):
     video_id: str
 
+class SpeakingEvalResponse(BaseModel):
+    """
+    Schema for AI evaluation of speaking.
+    """
+    score: int                  # overall score 0-100
+    fluency: int                # 0-100
+    pronunciation: int          # 0-100
+    vocabulary: int             # 0-100
+    feedback: str               # short feedback string
+    suggestions: Optional[List[str]] = None  # optional list of suggestions
+
+    class Config:
+        extra = 'forbid'
+
 
 # -----------------------------
 # Exercise (Listening + Speaking Group)
