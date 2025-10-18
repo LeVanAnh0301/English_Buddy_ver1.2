@@ -22,9 +22,9 @@ services:
       context: ./frontend
     container_name: english_buddy_frontend
     ports:
-      - "5173:5173"
+      - "80:80" 
     volumes:
-      - ./frontend:/app
+      - ./frontend:/app         
       - /app/node_modules
     depends_on:
       - api

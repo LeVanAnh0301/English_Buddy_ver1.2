@@ -1,52 +1,25 @@
-import React, { useState, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-const BACKEND_URL = "http://localhost:8000";
+const BACKEND_URL = "/api";
 
 function VideoListPage() {
   const navigate = useNavigate();
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fake data test
-  const fakeData = [
-    {
-      id: "dQw4w9WgXcQ",
-      title: "English Listening - Daily Conversation",
-      transcript: "Practice listening with real conversations.",
-      thumbnail: "https://img.youtube.com/vi/dQw4w9WgXcQ/0.jpg",
-    },
-    {
-      id: "_DmYA7OzyRE",
-      title: "Speaking Practice - Travel Roleplay",
-      transcript: "Improve your speaking with travel scenarios.",
-      thumbnail: "https://img.youtube.com/vi/_DmYA7OzyRE/0.jpg",
-    },
-    {
-      id: "M7lc1UVf-VE",
-      title: "Learn Loops in Computer Science",
-      transcript: "Simple explanation with examples.",
-      thumbnail: "https://img.youtube.com/vi/M7lc1UVf-VE/0.jpg",
-    },
-  ];
-
   useEffect(() => {
-    // Gán fake data tạm thời ngay khi mount
-    setVideos(fakeData);
     setLoading(false);
-
-    // Thử gọi API backend
     axios
-      .get(`${BACKEND_URL}/sources/`)
+      .get(`${BACKEND_URL}/videos/`)
       .then((res) => {
         if (res.data && res.data.length > 0) {
-          setVideos(res.data); // nếu API trả dữ liệu mới, update state
+          setVideos(res.data); 
         }
       })
       .catch((err) => {
         console.error("Error fetching sources, keep using fake data:", err);
-        // Nếu API lỗi, vẫn giữ fakeData
       });
   }, []);
 
