@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-const BACKEND_URL = "/api";
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL;
 
 function VideoListPage() {
   const navigate = useNavigate();
@@ -14,8 +14,15 @@ function VideoListPage() {
     axios
       .get(`${BACKEND_URL}/videos/`)
       .then((res) => {
-        if (res.data && res.data.length > 0) {
-          setVideos(res.data); 
+        const data = res.data;
+        // Ensure it's an array
+        if (Array.isArray(data)) {
+          setVideos(data);
+        } else if (Array.isArray(data.data)) {
+          setVideos(data.data);
+        } else {
+          setVideos([]); // fallback
+          console.warn("Unexpected API response:", data);
         }
       })
       .catch((err) => {
