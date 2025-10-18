@@ -78,28 +78,43 @@ def generate_comprehension_questions(transcript: str, title: str) -> List[Dict[s
 # --------------------------
 # 🔹 AI evaluation for listening
 # --------------------------
-def ai_evaluate_listening(answer: str, expected: str) -> dict:
+def ai_evaluate_listening(correct_answer: str, user_answer: str) -> Dict[str, Any]:
     """
-    Compare user's answer with expected answer.
-    Return dict with general, score, details, feedback.
+    Evaluate user's answer for a single listening question.
+    
+    correct_answer: string, expected answer
+    user_answer: string, student's answer
+
+    Returns JSON:
+    {
+      "general": "correct"|"incorrect",
+      "score": 0-100,
+      "details": {"fluency": int, "pronunciation": int, "vocabulary": int},
+      "feedback": str,
+      "suggestion": str (optional)
+    }
     """
     prompt = f"""
     You are an English listening evaluator.
-    Compare the user's answer to the expected answer.
-    Return strictly valid JSON with:
-    - score: int (0-100)
-    - fluency: int (0-100)
-    - pronunciation: int (0-100)
-    - vocabulary: int (0-100)
-    - feedback: short string
+    Compare student's answer to the correct answer.
+
+    Correct answer: "{correct_answer}"
+    Student's answer: "{user_answer}"
+
+    Return strictly valid JSON with keys:
+    - general: "correct" if correct, otherwise "incorrect"
+    - score: 0-100
+    - details: {{ "fluency": 0-100, "pronunciation": 0-100, "vocabulary": 0-100 }}
+    - feedback: one short sentence
+    - suggestion: optional, short advice if answer is incorrect
     """
 
     try:
         resp = client.chat.completions.create(
             model=MODEL,
             messages=[
-                {"role": "system", "content": "You are a professional English evaluator."},
-                {"role": "user", "content": prompt + f"\nExpected: {expected}\nUser: {answer}"}
+                {"role": "system", "content": "You are a professional English listening evaluator."},
+                {"role": "user", "content": prompt}
             ],
             temperature=0.3
         )
@@ -107,19 +122,20 @@ def ai_evaluate_listening(answer: str, expected: str) -> dict:
         text = resp.choices[0].message.content.strip()
         result = json.loads(text)
 
-        for key in ["score", "fluency", "pronunciation", "vocabulary"]:
-            if key not in result or not isinstance(result[key], int):
-                result[key] = 0
-        if "feedback" not in result:
-            result["feedback"] = ""
+        # đảm bảo tất cả key có
+        result.setdefault("general", "incorrect")
+        result.setdefault("score", 0)
+        result.setdefault("details", {"fluency": 0, "pronunciation": 0, "vocabulary": 0})
+        result.setdefault("feedback", "")
+        if "suggestion" not in result or not result["suggestion"]:
+            result["suggestion"] = "" if result["general"] == "correct" else f"Expected answer: {correct_answer}"
 
         return result
 
     except json.JSONDecodeError:
-        return {"score": 0, "fluency": 0, "pronunciation": 0, "vocabulary": 0, "feedback": "Could not parse GPT response"}
+        return {"error": "invalid_json", "raw": text}
     except Exception as e:
-        return {"score": 0, "fluency": 0, "pronunciation": 0, "vocabulary": 0, "feedback": f"Evaluation failed: {str(e)}"}
-
+        return {"error": f"AI evaluation failed: {str(e)}"}
 # --------------------------
 # 🔹 AI evaluation for speaking
 # --------------------------
