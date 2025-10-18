@@ -78,7 +78,6 @@ def on_startup():
     init_db_data()
 
 app.include_router(video_router.router, prefix="/api/videos", tags=["Videos"])
-# app.include_router(exercises.router, prefix="/api/exercises", tags=["Exercises"])
 app.include_router(speaking_router.router, prefix="/api/speaking", tags=["Speaking"])
 app.include_router(listening_router.router, prefix="/api/listening", tags=["Listening"])
 app.include_router(ai_question_router.router, prefix="/api/ai/questions", tags=["AI Question Generator"])
