@@ -1,16 +1,8 @@
-from fastapi import FastAPI, HTTPException, Depends, status
-from pydantic import BaseModel
-from typing import Annotated
+from fastapi import FastAPI
 from backend import models
 from fastapi.middleware.cors import CORSMiddleware
 from backend.database import SessionLocal, engine, Base, DATABASE_URL
-from sqlalchemy.orm import Session
-from backend.routers import exercises, video_router, speaking_router, ai_question_router, listening_router, ai_eval_router
-from sqlalchemy import text
-from sqlalchemy.exc import OperationalError
-import time 
-from sqlalchemy.engine.url import make_url, URL
-from sqlalchemy import create_engine as sa_create_engine
+from backend.routers import video_router, speaking_router, ai_question_router, listening_router, ai_eval_router
 
 app = FastAPI()
 app.add_middleware(
@@ -90,5 +82,3 @@ def get_db():
     finally:
         db.close()
 
-
-# db_dependency = Annotated[Session, Depends(get_db)]
