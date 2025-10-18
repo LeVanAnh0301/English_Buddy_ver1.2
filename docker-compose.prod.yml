@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+
+  api:
+    build:
+      context: ./backend
+    container_name: english_buddy_api
+    env_file:
+      - ./backend/.env
+    environment:
+      - PYTHONPATH=/app/backend:/app
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: english_buddy_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    restart: unless-stopped
