@@ -78,39 +78,47 @@ def generate_comprehension_questions(transcript: str, title: str) -> List[Dict[s
 # --------------------------
 # 🔹 AI evaluation for listening
 # --------------------------
-def ai_evaluate_listening(answer: str, expected: str) -> Dict[str, Any]:
+def ai_evaluate_listening(answer: str, expected: str) -> dict:
     """
-    GPT-based evaluation of listening responses.
-    Compares user answer with expected answer.
+    Compare user's answer with expected answer.
+    Return dict with general, score, details, feedback.
     """
     prompt = f"""
-    Compare user's listening answer to the expected one.
-    Return strictly valid JSON like:
-    {{
-        "score": int (0-100),
-        "feedback": "1 short sentence"
-    }}
-
-    Expected: "{expected}"
-    User: "{answer}"
+    You are an English listening evaluator.
+    Compare the user's answer to the expected answer.
+    Return strictly valid JSON with:
+    - score: int (0-100)
+    - fluency: int (0-100)
+    - pronunciation: int (0-100)
+    - vocabulary: int (0-100)
+    - feedback: short string
     """
 
     try:
         resp = client.chat.completions.create(
             model=MODEL,
             messages=[
-                {"role": "system", "content": "You are an English grading assistant."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": "You are a professional English evaluator."},
+                {"role": "user", "content": prompt + f"\nExpected: {expected}\nUser: {answer}"}
             ],
             temperature=0.3
         )
-        text = resp.choices[0].message.content.strip()
-        return json.loads(text)
-    except json.JSONDecodeError:
-        return {"error": "invalid_json", "raw": text}
-    except Exception as e:
-        return {"error": f"AI evaluation failed: {str(e)}"}
 
+        text = resp.choices[0].message.content.strip()
+        result = json.loads(text)
+
+        for key in ["score", "fluency", "pronunciation", "vocabulary"]:
+            if key not in result or not isinstance(result[key], int):
+                result[key] = 0
+        if "feedback" not in result:
+            result["feedback"] = ""
+
+        return result
+
+    except json.JSONDecodeError:
+        return {"score": 0, "fluency": 0, "pronunciation": 0, "vocabulary": 0, "feedback": "Could not parse GPT response"}
+    except Exception as e:
+        return {"score": 0, "fluency": 0, "pronunciation": 0, "vocabulary": 0, "feedback": f"Evaluation failed: {str(e)}"}
 
 # --------------------------
 # 🔹 AI evaluation for speaking

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend import models
+import uuid
 from backend.services.ai_service import generate_comprehension_questions
 
 router = APIRouter()
@@ -16,9 +17,22 @@ def generate_questions(video_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Transcript not available")
 
     question_list = generate_comprehension_questions(video.transcript, video.title)
+
+    questions = []
+    for q in question_list:
+        # Nếu q là str (trường hợp parse chưa đúng), convert thành dict
+        if isinstance(q, str):
+            import json
+            try:
+                q = json.loads(q)
+            except Exception:
+                continue  # bỏ qua nếu parse fail
+        q["id"] = str(uuid.uuid4())
+        questions.append(q)
+
     exercise_content = {
         "title": f"Questions for: {video.title}",
-        "questions": question_list
+        "questions": questions
     }
     exercise = models.exercise = models.ListeningExercise(
         source_id=video.id,
