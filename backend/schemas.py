@@ -1,4 +1,4 @@
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, Field, AliasChoices
 from typing import List, Optional
 from datetime import datetime
 import uuid
@@ -126,3 +126,46 @@ class AIEvalResponse(BaseModel):
 # -----------------------------
 class MessageResponse(BaseModel):
     message: str
+
+# -----------------
+# Pydantic Schemas for AI Output
+# -----------------
+class ComprehensionQuestion(BaseModel):
+    """Đại diện cho một câu hỏi hiểu nội dung."""
+
+    level: str = Field(
+        ...,
+        description="Cấp độ CEFR: A1, A2, B1, B2, C1.",
+        alias='difficulty'  # JSON key 'difficulty' -> attribute 'level'
+    )
+
+    question: str = Field(
+        ...,
+        description="Câu hỏi chi tiết về nội dung video/transcript."
+    )
+
+    expected_answer_points: List[str] = Field(
+        ...,
+        description="Các điểm chính cần có trong câu trả lời.",
+        alias='answer'  # JSON key 'answer' -> attribute 'expected_answer_points'
+    )
+
+    question_type: str = Field(
+        ...,
+        description="Loại câu hỏi: 'open_ended' | 'true_false' | 'multiple_choice'",
+    )
+
+    class Config:
+        extra = 'ignore'
+        populate_by_name = True  # cần để ánh xạ alias
+
+class ComprehensionExercise(BaseModel):
+    """Cấu trúc tổng thể của bài tập."""
+    title: str = Field(..., description="Tiêu đề bài tập.")
+    questions: List[ComprehensionQuestion] = Field(
+        ...,
+        description="Danh sách 10-15 câu hỏi."
+    )
+
+    class Config:
+        extra = 'ignore'
