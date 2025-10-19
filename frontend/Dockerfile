@@ -1,5 +1,5 @@
 # Stage 1: Build a Vite application
-FROM node:18-alpine AS build
+FROM node:20.19-alpine
 
 WORKDIR /app
 COPY package*.json ./
