@@ -81,7 +81,7 @@ function Navbar() {
     <nav className="navbar">
       {/* Logo bên trái */}
       <div className="navbar-left">
-        <img src="../logo/logo_english_buddy.jpg" alt="Logo" className="logo" />
+        <img className="navbar-logo" src="/logo/logo_english_buddy.jpg" alt="English Buddy Logo" />
         <span className="brand">English Buddy</span>
       </div>
 

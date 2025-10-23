@@ -38,7 +38,7 @@ function HomePage() {
           </div>
         </div>
         <div className="hero-logo">
-          <img src="../logo/logo_english_buddy.jpg" alt="English Buddy Logo" />
+          <img src="/logo/logo_english_buddy.jpg" alt="English Buddy Logo" />
         </div>
       </section>
 
