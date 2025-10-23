@@ -7,7 +7,7 @@ services:
       context: ./backend
     container_name: english_buddy_api
     env_file:
-      - ./backend/.env
+      - ./.env.production
     environment:
       - PYTHONPATH=/app/backend:/app
     ports:
