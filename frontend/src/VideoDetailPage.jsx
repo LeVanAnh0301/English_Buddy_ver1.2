@@ -5,12 +5,17 @@ import axios from "axios";
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
 function VideoDetailPage() {
-  const { id } = useParams();
+  const { id } = useParams(); // 'id' này là ID của bài tập (exercise_id)
 
   const [exercises, setExercises] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [isLoadingExercise, setIsLoadingExercise] = useState(true);
+  
+  // ✅ FIX: Thêm state để lưu ID video YouTube chính xác
+  const [youtubeId, setYoutubeId] = useState(""); 
+  // Bạn cũng có thể lưu toàn bộ thông tin bài tập nếu muốn
+  // const [exerciseDetail, setExerciseDetail] = useState(null);
 
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -25,25 +30,29 @@ function VideoDetailPage() {
   const recognitionRef = useRef(null);
 
   useEffect(() => {
-    const fetchExercises = async () => {
+    const fetchExerciseDetails = async () => {
       try {
         setIsLoadingExercise(true);
-        const res = await axios.get(`${BACKEND_URL}/api/listening/exercises`);
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          const first = res.data[0];
-          const detail = await axios.get(`${BACKEND_URL}/api/listening/exercises/${first.id}`);
-          setExercises(detail.data.content?.questions || []);
-          setCurrentQuestion(detail.data.content?.questions?.[0] || null);
-        }
+        
+        const res = await axios.get(`${BACKEND_URL}/api/listening/exercises/${id}`);
+        const videoIdFromApi = res.data.youtube_video_id || "";
+        const questionsFromApi = res.data.content?.questions || [];
+
+        setYoutubeId(videoIdFromApi);
+        setExercises(questionsFromApi);
+        setCurrentQuestion(questionsFromApi[0] || null);
+
       } catch (err) {
-        console.error("❌ Error fetching exercises:", err);
+        console.error("❌ Error fetching exercise details:", err);
       } finally {
         setIsLoadingExercise(false);
       }
     };
-    fetchExercises();
-  }, []);
 
+    fetchExerciseDetails();
+  }, [id]); 
+
+  
   const startRecording = async () => {
     try {
       const SpeechRecognition =
@@ -110,6 +119,7 @@ function VideoDetailPage() {
     setEvaluationResult(null);
   };
 
+
   const submitAnswer = async () => {
     if (!currentQuestion) return;
     if (!recordingTranscript.trim()) {
@@ -119,16 +129,24 @@ function VideoDetailPage() {
 
     setIsProcessing(true);
     try {
-      const payload = {
-        question_id: String(currentQuestion.id || currentIndex),
-        user_answer: recordingTranscript.trim(),
-        exercise_id: String(id),
-      };
+        const formData = new FormData();
+        // 'currentQuestion.id' là ID của câu hỏi
+        formData.append("question_id", String(currentQuestion.id)); 
+        formData.append("user_answer", recordingTranscript.trim());
+        // 'id' (từ useParams) là ID của bài tập
+        formData.append("exercise_id", String(id)); 
 
-      console.log("📤 Submitting:", payload);
+        console.log("📤 Submitting FormData:", {
+          question_id: currentQuestion.id,
+          user_answer: recordingTranscript.trim(),
+          exercise_id: id,
+        });
 
-      const res = await axios.post(`${BACKEND_URL}/api/speaking/evaluate`, payload);
-
+        const res = await axios.post(`${BACKEND_URL}/api/speaking/evaluate`, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
       setEvaluationResult(res.data);
     } catch (err) {
       console.error("❌ Evaluate error:", err);
@@ -146,8 +164,9 @@ function VideoDetailPage() {
 
   const nextQuestion = () => {
     if (currentIndex + 1 < exercises.length) {
-      setCurrentIndex(currentIndex + 1);
-      setCurrentQuestion(exercises[currentIndex + 1]);
+      const nextIdx = currentIndex + 1;
+      setCurrentIndex(nextIdx);
+      setCurrentQuestion(exercises[nextIdx]);
       setEvaluationResult(null);
       setRecordingTranscript("");
       setAudioBlob(null);
@@ -179,23 +198,28 @@ function VideoDetailPage() {
 
           {/* ✅ FIXED YouTube Player */}
           <div style={{ position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden", borderRadius: "8px" }}>
-            <iframe
-              src={`https://www.youtube.com/embed/${id}?autoplay=0&enablejsapi=1`}
-              title="YouTube Video Player"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                border: "none",
-                borderRadius: "8px",
-                pointerEvents: "auto",
-                zIndex: 1,
-              }}
-            ></iframe>
+            {youtubeId ? (
+              <iframe
+                // Sử dụng state 'youtubeId' đã được fetch về
+                src={`https://www.youtube.com/embed/${youtubeId}?autoplay=0&enablejsapi=1`}
+                title="YouTube Video Player"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  border: "none",
+                  borderRadius: "8px",
+                  pointerEvents: "auto",
+                  zIndex: 1,
+                }}
+              ></iframe>
+            ) : (
+              !isLoadingExercise && <p>Không tìm thấy ID video YouTube.</p>
+            )}
           </div>
 
           <div
@@ -215,7 +239,7 @@ function VideoDetailPage() {
           </div>
         </div>
 
-        {/* RIGHT PANEL */}
+        {/* RIGHT PANEL (Giữ nguyên) */}
         <div style={{ flex: "1", minWidth: "350px" }}>
           <h3>Bài tập Speaking</h3>
 
@@ -378,7 +402,7 @@ function VideoDetailPage() {
               )}
             </div>
           ) : (
-            <p>❌ Không tìm thấy câu hỏi</p>
+            <p>{isLoadingExercise ? "" : "❌ Không tìm thấy câu hỏi cho bài tập này."}</p>
           )}
         </div>
       </div>

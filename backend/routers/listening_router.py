@@ -12,7 +12,7 @@ def list_exercises(db: Session = Depends(get_db)):
 
 @router.get("/exercises/{exercise_id}", summary="Get a specific listening exercise")
 def get_exercise(exercise_id: str, db: Session = Depends(get_db)):
-    exercise = db.query(models.ListeningExercise).filter_by(id=exercise_id).first()
+    exercise = db.query(models.ListeningSource).filter_by(id=exercise_id).first()
     if not exercise:
         raise HTTPException(status_code=404, detail="Exercise not found")
     return exercise
