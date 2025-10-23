@@ -2,15 +2,17 @@ import React, { useState, useRef, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import axios from "axios";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 function VideoDetailPage() {
-  const { id } = useParams();
-
+  const { id } = useParams(); 
   const [exercises, setExercises] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [isLoadingExercise, setIsLoadingExercise] = useState(true);
+  
+  const [youtubeId, setYoutubeId] = useState(""); 
+  const [exerciseId, setExerciseId] = useState(null);
 
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -24,28 +26,30 @@ function VideoDetailPage() {
   const audioChunksRef = useRef([]);
   const recognitionRef = useRef(null);
 
-  // Fetch all questions from listening exercise
   useEffect(() => {
-    const fetchExercises = async () => {
+    const fetchExerciseDetails = async () => {
       try {
         setIsLoadingExercise(true);
-        const res = await axios.get(`${BACKEND_URL}/api/listening/exercises`);
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          const first = res.data[0];
-          const detail = await axios.get(`${BACKEND_URL}/api/listening/exercises/${first.id}`);
-          setExercises(detail.data.content?.questions || []);
-          setCurrentQuestion(detail.data.content?.questions?.[0] || null);
-        }
+        const res = await axios.get(`${BACKEND_URL}/api/listening/exercises/${id}`);
+        const videoIdFromApi = res.data.source?.youtube_video_id || "";
+        const questionsFromApi = res.data.content?.questions || [];
+
+        setExerciseId(res.data.id); 
+        setYoutubeId(videoIdFromApi);
+        setExercises(questionsFromApi);
+        setCurrentQuestion(questionsFromApi[0] || null);
+
       } catch (err) {
-        console.error("❌ Error fetching exercises:", err);
+        console.error("❌ Error fetching exercise details:", err);
       } finally {
         setIsLoadingExercise(false);
       }
     };
-    fetchExercises();
-  }, []);
 
-  /** ========== Recording Section ========== */
+    fetchExerciseDetails();
+  }, [id]); 
+
+  
   const startRecording = async () => {
     try {
       const SpeechRecognition =
@@ -60,7 +64,6 @@ function VideoDetailPage() {
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
-      // Init Speech Recognition
       const recognition = new SpeechRecognition();
       recognitionRef.current = recognition;
       recognition.lang = "en-US";
@@ -113,7 +116,7 @@ function VideoDetailPage() {
     setEvaluationResult(null);
   };
 
-  /** ========== Submit & Evaluate ========== */
+
   const submitAnswer = async () => {
     if (!currentQuestion) return;
     if (!recordingTranscript.trim()) {
@@ -123,16 +126,22 @@ function VideoDetailPage() {
 
     setIsProcessing(true);
     try {
-      const payload = {
-        question_id: String(currentQuestion.id || currentIndex),
-        user_answer: recordingTranscript.trim(),
-        exercise_id: String(id),
-      };
+        const formData = new FormData();
+        formData.append("question_id", String(currentQuestion.id)); 
+        formData.append("user_answer", recordingTranscript.trim());
+        formData.append("exercise_id", String(exerciseId)); 
 
-      console.log("📤 Submitting:", payload);
+        console.log("📤 Submitting FormData:", {
+          question_id: currentQuestion.id,
+          user_answer: recordingTranscript.trim(),
+          exercise_id: exerciseId,
+        });
 
-      const res = await axios.post(`${BACKEND_URL}/api/speaking/evaluate`, payload);
-
+        const res = await axios.post(`${BACKEND_URL}/api/speaking/evaluate`, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
       setEvaluationResult(res.data);
     } catch (err) {
       console.error("❌ Evaluate error:", err);
@@ -150,8 +159,9 @@ function VideoDetailPage() {
 
   const nextQuestion = () => {
     if (currentIndex + 1 < exercises.length) {
-      setCurrentIndex(currentIndex + 1);
-      setCurrentQuestion(exercises[currentIndex + 1]);
+      const nextIdx = currentIndex + 1;
+      setCurrentIndex(nextIdx);
+      setCurrentQuestion(exercises[nextIdx]);
       setEvaluationResult(null);
       setRecordingTranscript("");
       setAudioBlob(null);
@@ -160,7 +170,7 @@ function VideoDetailPage() {
     }
   };
 
-  /** ========== UI ========== */
+  /** ================== UI ================== */
   return (
     <div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
       <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
@@ -178,18 +188,43 @@ function VideoDetailPage() {
           >
             ← Quay lại
           </Link>
-          <h3 style={{ marginTop: "20px" }}>Video</h3>
-          <iframe
-            width="100%"
-            height="315"
-            src={`https://www.youtube.com/embed/${id}`}
-            title="YouTube player"
-            frameBorder="0"
-            allowFullScreen
-            style={{ borderRadius: "8px" }}
-          ></iframe>
 
-          <div style={{ marginTop: "15px", background: "#f8f9fa", padding: "15px", borderRadius: "8px" }}>
+          <h3 style={{ marginTop: "20px" }}>Video</h3>
+
+          {/* ✅ FIXED YouTube Player */}
+          <div style={{ position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden", borderRadius: "8px" }}>
+            {youtubeId ? (
+              <iframe
+                // Sử dụng state 'youtubeId' đã được fetch về
+                src={`https://www.youtube.com/embed/${youtubeId}?autoplay=0&enablejsapi=1`}
+                title="YouTube Video Player"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  border: "none",
+                  borderRadius: "8px",
+                  pointerEvents: "auto",
+                  zIndex: 1,
+                }}
+              ></iframe>
+            ) : (
+              !isLoadingExercise && <p>Không tìm thấy ID video YouTube.</p>
+            )}
+          </div>
+
+          <div
+            style={{
+              marginTop: "15px",
+              background: "#f8f9fa",
+              padding: "15px",
+              borderRadius: "8px",
+            }}
+          >
             <h4>📖 Hướng dẫn xem video</h4>
             <ul>
               <li>Nhấn ▶️ để phát video</li>
@@ -199,16 +234,28 @@ function VideoDetailPage() {
           </div>
         </div>
 
-        {/* RIGHT PANEL */}
+        {/* RIGHT PANEL (Giữ nguyên) */}
         <div style={{ flex: "1", minWidth: "350px" }}>
           <h3>Bài tập Speaking</h3>
 
           {isLoadingExercise ? (
             <p>⏳ Đang tải bài tập...</p>
           ) : currentQuestion ? (
-            <div style={{ background: "#fff", borderRadius: "8px", padding: "20px" }}>
+            <div
+              style={{
+                background: "#fff",
+                borderRadius: "8px",
+                padding: "20px",
+              }}
+            >
               <h4>Câu hỏi {currentIndex + 1}:</h4>
-              <p style={{ background: "#f8f9fa", padding: "10px", borderRadius: "6px" }}>
+              <p
+                style={{
+                  background: "#f8f9fa",
+                  padding: "10px",
+                  borderRadius: "6px",
+                }}
+              >
                 {currentQuestion.question || "Câu hỏi trống"}
               </p>
 
@@ -250,11 +297,25 @@ function VideoDetailPage() {
                 ) : (
                   <div>
                     <p style={{ color: "#28a745" }}>✅ Đã ghi âm xong!</p>
-                    <p style={{ fontStyle: "italic", background: "#f8f9fa", padding: "10px", borderRadius: "6px" }}>
+                    <p
+                      style={{
+                        fontStyle: "italic",
+                        background: "#f8f9fa",
+                        padding: "10px",
+                        borderRadius: "6px",
+                      }}
+                    >
                       "{recordingTranscript}"
                     </p>
 
-                    <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginTop: "10px" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "10px",
+                        justifyContent: "center",
+                        marginTop: "10px",
+                      }}
+                    >
                       <button
                         onClick={submitAnswer}
                         disabled={isProcessing}
@@ -286,7 +347,14 @@ function VideoDetailPage() {
 
               {/* Result */}
               {evaluationResult && (
-                <div style={{ marginTop: "20px", background: "#f8f9fa", padding: "15px", borderRadius: "8px" }}>
+                <div
+                  style={{
+                    marginTop: "20px",
+                    background: "#f8f9fa",
+                    padding: "15px",
+                    borderRadius: "8px",
+                  }}
+                >
                   <h4>Kết quả:</h4>
                   <p>
                     <strong>Điểm:</strong> {evaluationResult.score}/100
@@ -329,7 +397,7 @@ function VideoDetailPage() {
               )}
             </div>
           ) : (
-            <p>❌ Không tìm thấy câu hỏi</p>
+            <p>{isLoadingExercise ? "" : "❌ Không tìm thấy câu hỏi cho bài tập này."}</p>
           )}
         </div>
       </div>
