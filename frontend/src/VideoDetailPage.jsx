@@ -33,9 +33,8 @@ function VideoDetailPage() {
     const fetchExerciseDetails = async () => {
       try {
         setIsLoadingExercise(true);
-        
         const res = await axios.get(`${BACKEND_URL}/api/listening/exercises/${id}`);
-        const videoIdFromApi = res.data.youtube_video_id || "";
+        const videoIdFromApi = res.data.source?.youtube_video_id || "";
         const questionsFromApi = res.data.content?.questions || [];
 
         setYoutubeId(videoIdFromApi);

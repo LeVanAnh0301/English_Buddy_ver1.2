@@ -37,7 +37,7 @@ class VideoResponse(BaseModel):
     youtube_video_id: str
     transcript: str | None = None
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 class VideoListResponse(BaseModel):
     videos: List[VideoResponse]
@@ -45,18 +45,15 @@ class VideoListResponse(BaseModel):
 # -----------------------------
 # Listening Schema
 # -----------------------------
-class ListeningQuestionBase(BaseModel):
-    question_type: str  
-    question_text: str
-    correct_answer: str
+class ListeningExerciseSchema(BaseModel):
+    id: str
+    content: dict
+    created_at: datetime
+    exercise_type: str
+    source: VideoResponse   # include the source info
 
-
-class ListeningQuestionCreate(ListeningQuestionBase):
-    video_id: str
-
-
-class ListeningQuestionResponse(ListeningQuestionBase, BaseSchema):
-    video_id: str
+    class Config:
+        orm_mode = True
 
 
 # -----------------------------
