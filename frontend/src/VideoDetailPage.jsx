@@ -2,20 +2,17 @@ import React, { useState, useRef, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import axios from "axios";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 function VideoDetailPage() {
-  const { id } = useParams(); // 'id' này là ID của bài tập (exercise_id)
-
+  const { id } = useParams(); 
   const [exercises, setExercises] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [isLoadingExercise, setIsLoadingExercise] = useState(true);
   
-  // ✅ FIX: Thêm state để lưu ID video YouTube chính xác
   const [youtubeId, setYoutubeId] = useState(""); 
-  // Bạn cũng có thể lưu toàn bộ thông tin bài tập nếu muốn
-  // const [exerciseDetail, setExerciseDetail] = useState(null);
+  const [exerciseId, setExerciseId] = useState(null);
 
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -37,6 +34,7 @@ function VideoDetailPage() {
         const videoIdFromApi = res.data.source?.youtube_video_id || "";
         const questionsFromApi = res.data.content?.questions || [];
 
+        setExerciseId(res.data.id); 
         setYoutubeId(videoIdFromApi);
         setExercises(questionsFromApi);
         setCurrentQuestion(questionsFromApi[0] || null);
@@ -129,16 +127,14 @@ function VideoDetailPage() {
     setIsProcessing(true);
     try {
         const formData = new FormData();
-        // 'currentQuestion.id' là ID của câu hỏi
         formData.append("question_id", String(currentQuestion.id)); 
         formData.append("user_answer", recordingTranscript.trim());
-        // 'id' (từ useParams) là ID của bài tập
-        formData.append("exercise_id", String(id)); 
+        formData.append("exercise_id", String(exerciseId)); 
 
         console.log("📤 Submitting FormData:", {
           question_id: currentQuestion.id,
           user_answer: recordingTranscript.trim(),
-          exercise_id: id,
+          exercise_id: exerciseId,
         });
 
         const res = await axios.post(`${BACKEND_URL}/api/speaking/evaluate`, formData, {
