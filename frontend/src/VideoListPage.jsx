@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-const BACKEND_URL = import.meta.env.VITE_API_BASE_URL;
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 function VideoListPage() {
   const navigate = useNavigate();
@@ -11,7 +11,7 @@ function VideoListPage() {
 
   useEffect(() => {
     axios
-      .get(`${BACKEND_URL}/videos/`)
+      .get(`${BACKEND_URL}/api/videos/`)
       .then((res) => {
         const data = res.data;
         if (Array.isArray(data)) {
