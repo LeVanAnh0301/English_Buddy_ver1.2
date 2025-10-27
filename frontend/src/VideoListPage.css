@@ -1,75 +1,168 @@
-.page-container {
-  padding: 20px;
+.video-page {
+  padding: 40px;
+  background: #f4f6f9;
+  min-height: 100vh;
+  position: relative;
 }
 
-.section-title {
-  font-size: 22px;
-  font-weight: bold;
-  margin-bottom: 15px;
+.video-title {
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1e3a8a;
+}
+
+.video-message {
+  text-align: center;
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 25px;
+  font-weight: 500;
+  animation: fadeIn 0.3s ease;
 }
 
 .video-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 20px;
 }
 
 .video-card {
   background: #fff;
-  border-radius: 10px;
-  box-shadow: 0px 2px 8px rgba(0,0,0,0.1);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  transition: transform 0.2s;
+  transition: transform 0.2s, box-shadow 0.3s;
 }
 
 .video-card:hover {
   transform: translateY(-5px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
 }
 
-.thumbnail-container {
-  position: relative;
-}
-
-.thumbnail {
+.video-thumb {
   width: 100%;
-  height: 150px;
+  height: 180px;
   object-fit: cover;
-}
-
-.views-badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: rgba(0,0,0,0.7);
-  color: #fff;
-  padding: 2px 6px;
-  border-radius: 6px;
-  font-size: 12px;
-}
-
-.level-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: #28a745;
-  color: #fff;
-  padding: 2px 6px;
-  border-radius: 6px;
-  font-size: 12px;
+  cursor: pointer;
 }
 
 .video-info {
-  padding: 10px;
+  padding: 15px;
 }
 
-.duration {
-  font-size: 12px;
-  color: gray;
-  margin: 0;
+.video-info h3 {
+  margin: 0 0 10px;
+  color: #111827;
 }
 
-.title {
-  font-size: 14px;
+.video-btn {
+  width: 100%;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 6px;
+  background: #007bff;
+  color: #fff;
+  cursor: pointer;
   font-weight: 600;
-  margin: 5px 0 0 0;
+  transition: background 0.2s;
+}
+
+.video-btn:hover {
+  background: #0056b3;
+}
+
+/* 🔮 Nút nổi tạo mới */
+.floating-generate-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background: linear-gradient(135deg, #2563eb, #06b6d4);
+  color: white;
+  padding: 18px;
+  border-radius: 50%;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 0.3s;
+  animation: pulse 2s infinite;
+  z-index: 1000;
+}
+
+.floating-generate-btn:hover {
+  transform: scale(1.1);
+}
+
+.magic-icon {
+  font-size: 24px;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: 75px;
+  right: 0;
+  background: #0ea5e9;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+}
+
+.floating-generate-btn:hover .tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.disabled {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* Hiệu ứng nhịp */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 15px rgba(14, 165, 233, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(14, 165, 233, 0);
+  }
+}
+
+/* Fade in */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .video-title {
+    font-size: 1.6rem;
+  }
+
+  .floating-generate-btn {
+    bottom: 20px;
+    right: 20px;
+    padding: 15px;
+  }
+
+  .tooltip {
+    font-size: 0.8rem;
+    bottom: 65px;
+  }
 }
