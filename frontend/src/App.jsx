@@ -6,6 +6,7 @@ import HomePage from "./components/HomePage";
 import Navbar from "./components/Navbar"; 
 import Footer from "./components/Footer";
 import WordSpeakingPage from "./WordSpeakingPage";
+import CreateVideoPage from "./CreateVideoPage";
 import "./App.css";
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/videos" element={<VideoListPage />} />
         <Route path="/video/:id" element={<VideoDetailPage />} />
+        <Route path="/videos/new" element={<CreateVideoPage />} />
         <Route path="/word-speaking" element={<WordSpeakingPage />} />
       </Routes>
 
