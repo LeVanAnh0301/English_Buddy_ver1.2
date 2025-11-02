@@ -9,8 +9,6 @@ function VideoListPage() {
   const navigate = useNavigate();
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-  const [message, setMessage] = useState("");
 
   useEffect(() => {
     axios
@@ -34,24 +32,8 @@ function VideoListPage() {
     navigate(`/video/${id}`);
   };
 
-  const handleGenerateVideo = async () => {
-    setCreating(true);
-    setMessage("🎬 Đang tạo video học tập tự động, vui lòng đợi...");
-
-    try {
-      const youtubeVideoId = "e05422b2-c11f-498c-9577-b699f17b972e"; // 🔹 demo fixed ID
-      const res = await axios.post(
-        `${BACKEND_URL}/api/ai/questions/generate_questions/${youtubeVideoId}`
-      );
-
-      setMessage(`✅ Đã tạo thành công: ${res.data.title}`);
-      setTimeout(() => setMessage(""), 5000);
-    } catch (err) {
-      console.error(err);
-      setMessage("❌ Có lỗi khi tạo video học tập!");
-    } finally {
-      setCreating(false);
-    }
+  const handleGenerateVideo = () => {
+    navigate("/videos/new");
   };
 
   if (loading) {
@@ -67,52 +49,56 @@ function VideoListPage() {
       <h1 style={{ textAlign: "center", marginBottom: "30px" }}>
         🎥 Danh sách Video Học Tập
       </h1>
-
-      {/* 🔹 ICON TẠO VIDEO */}
       <div
         style={{
           position: "fixed",
           bottom: "30px",
           right: "30px",
-          background: "linear-gradient(135deg, #00b4d8, #0077b6)",
-          color: "#fff",
-          borderRadius: "50%",
-          width: "70px",
-          height: "70px",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          boxShadow: "0 6px 16px rgba(0,0,0,0.3)",
-          cursor: "pointer",
-          animation: "pulse 2s infinite",
           zIndex: 1000,
+          display: "flex", 
+          alignItems: "center",
+          gap: "12px", 
         }}
-        title="Bấm vào đây để tự tạo video học tập"
-        onClick={handleGenerateVideo}
       >
-        <FaMagic size={28} />
-      </div>
-
-      {message && (
         <div
           style={{
-            position: "fixed",
-            bottom: "110px",
-            right: "30px",
-            background: "#fff",
+            background: "#ffffff",
             color: "#333",
+            padding: "10px 16px",
             borderRadius: "12px",
-            padding: "12px 20px",
-            boxShadow: "0 4px 10px rgba(0,0,0,0.2)",
-            maxWidth: "280px",
-            animation: "fadeInUp 0.5s ease",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            animation: "fadeInRight 0.5s ease", // Hiệu ứng xuất hiện
+            fontWeight: "500",
           }}
         >
-          {creating ? "⚙️ " : "✨ "} {message}
+          Bấm vào đây để tạo video học tập
         </div>
-      )}
 
-      {/* GRID VIDEO */}
+        {/* 2. Nút Icon (như cũ) */}
+        <div
+          style={{
+            background: "linear-gradient(135deg, #00b4d8, #0077b6)",
+            color: "#fff",
+            borderRadius: "50%",
+            width: "70px",
+            height: "70px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            boxShadow: "0 6px 16px rgba(0,0,0,0.3)",
+            cursor: "pointer",
+            animation: "pulse 2s infinite",
+          }}
+          title="Tạo video học tập mới" // Vẫn giữ title gốc
+          onClick={handleGenerateVideo}
+        >
+          <FaMagic size={28} />
+        </div>
+      </div>
+
+      {/* ❌ Đã XÓA BỎ khối 'message && ...' bị comment */}
+
+      {/* GRID VIDEO (Giữ nguyên) */}
       <div
         style={{
           display: "grid",
@@ -179,9 +165,16 @@ function VideoListPage() {
           70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(0,123,255,0); }
           100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,123,255,0); }
         }
+        
+        /* 'fadeInUp' không còn dùng nhưng tôi vẫn giữ, 'fadeInRight' được thêm vào */
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInRight {
+          from { opacity: 0; transform: translateX(20px); }
+          to { opacity: 1; transform: translateX(0); }
         }
       `}</style>
     </div>
