@@ -17,11 +17,11 @@ function CreateVideoPage() {
     title: "",
     url: "",
     youtube_video_id: "",
+    transcript: "", 
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
 
-  // ... (Phần code logic handleSubmit, handleChange... giữ nguyên) ...
   const handleChange = (e) => {
     const { name, value } = e.target;
     
@@ -44,18 +44,21 @@ function CreateVideoPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.title || !formData.url || !formData.youtube_video_id) {
-      setMessage("❌ Vui lòng điền đầy đủ thông tin.");
+      setMessage("❌ Vui lòng điền đầy đủ thông tin (Title, URL, ID).");
       return;
     }
+    // Transcript có thể là optional, nên không cần check ở đây
 
     setIsSubmitting(true);
     setMessage("Đang xử lý và tạo video mới...");
 
     try {
+      // ✅ THÊM 3: Gửi 'transcript' trong request body
       const res = await axios.post(`${BACKEND_URL}/api/videos/`, {
         title: formData.title,
         url: formData.url,
         youtube_video_id: formData.youtube_video_id,
+        transcript: formData.transcript, 
       });
 
       setMessage("✅ Tạo video thành công!");
@@ -75,7 +78,7 @@ function CreateVideoPage() {
   // === CÁC STYLE OBJECT (Giữ nguyên) ===
   const formStyle = {
     maxWidth: "600px",
-    margin: "40px auto", // Form vẫn sẽ tự căn giữa
+    margin: "40px auto",
     padding: "30px",
     background: "#fff",
     borderRadius: "12px",
@@ -98,6 +101,14 @@ function CreateVideoPage() {
     border: "1px solid #ddd",
     borderRadius: "6px",
     boxSizing: "border-box",
+  };
+
+  
+  const textareaStyle = {
+    ...inputStyle, 
+    minHeight: "150px", 
+    fontFamily: "system-ui, sans-serif", 
+    resize: "vertical", 
   };
   
   const buttonStyle = {
@@ -138,8 +149,7 @@ function CreateVideoPage() {
   return (
     <div style={{ background: "#f4f6f9", minHeight: "100vh", padding: "20px" }}>
       
-      {/* ✅ ĐÃ DI CHUYỂN NÚT LÊN ĐÂY */}
-      {/* Nó nằm ngoài <form> và sẽ ở góc trái, bên trong padding 20px */}
+      {/* Nút quay lại (Giữ nguyên) */}
       <Link to="/videos" style={backLinkStyle}>
         ← Quay lại danh sách
       </Link>
@@ -149,7 +159,6 @@ function CreateVideoPage() {
           Tạo Video Học Tập Mới
         </h2>
         
-        {/* ... (Input fields giữ nguyên) ... */}
          <div style={inputGroupStyle}>
           <label htmlFor="title" style={labelStyle}>Tiêu đề (Title)</label>
           <input
@@ -189,6 +198,21 @@ function CreateVideoPage() {
             style={inputStyle}
             placeholder="ID sẽ tự động điền khi bạn dán link"
             readOnly
+          />
+        </div>
+
+        {/* ✅ THÊM 2: Thêm textarea cho transcript */}
+        <div style={inputGroupStyle}>
+          <label htmlFor="transcript" style={labelStyle}>
+            Nội dung (Transcript) (Optional)
+          </label>
+          <textarea
+            id="transcript"
+            name="transcript"
+            value={formData.transcript}
+            onChange={handleChange}
+            style={textareaStyle} // Sử dụng style mới
+            placeholder="Dán nội dung transcript của video vào đây..."
           />
         </div>
         
