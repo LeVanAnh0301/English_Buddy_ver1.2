@@ -80,6 +80,7 @@ function GlobalStyles() {
         align-items: flex-start;
         min-height: 100vh;
         background-color: #f0f2f5;
+        gap: 2rem; /* Thêm khoảng cách giữa 2 cột */
       }
       .word-container {
         background: white;
@@ -206,6 +207,10 @@ function GlobalStyles() {
         padding: 0.75rem 1.25rem;
         font-weight: bold;
         color: var(--text-color);
+        /* Cập nhật để chứa nút lưu */
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
       }
       .dict-body {
         padding: 1.25rem;
@@ -237,7 +242,98 @@ function GlobalStyles() {
         font-style: italic;
         color: #6c757d;
       }
+
+      /* --- STYLE MỚI CHO NÚT LƯU --- */
+      .btn-save {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+        border: none;
+        border-radius: 6px;
+        color: white;
+        background-color: var(--success-color);
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .btn-save:hover {
+        background-color: #218838;
+      }
+      .btn-save:disabled {
+        background-color: #6c757d;
+        cursor: not-allowed;
+      }
+
+      /* --- STYLE MỚI CHO CỘT LỊCH SỬ --- */
+      .history-container {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        width: 100%;
+        max-width: 300px;
+        align-self: flex-start; /* Giữ cho cột này ở trên cùng */
+      }
+      .history-title {
+        text-align: center;
+        color: var(--dark-gray);
+        margin-top: 0;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 0.75rem;
+      }
+      .history-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        max-height: 600px; /* Giới hạn chiều cao và cho phép cuộn */
+        overflow-y: auto;
+      }
+      .history-item {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f0f2f5;
+        cursor: pointer;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        color: var(--text-color);
+      }
+      .history-item:last-child {
+        border-bottom: none;
+      }
+      .history-item:hover {
+        background-color: var(--light-gray);
+        color: var(--primary-color);
+        font-weight: 500;
+      }
+      .history-empty {
+        text-align: center;
+        color: #6c757d;
+        padding: 1rem 0;
+      }
     `}</style>
+  );
+}
+
+// --- Component hiển thị lịch sử (MỚI) ---
+function HistoryPanel({ history, onSelectWord }) {
+  return (
+    <div className="history-container">
+      <h3 className="history-title">Lịch sử tra cứu</h3>
+      {history.length === 0 ? (
+        <div className="history-empty">Chưa có từ nào được lưu.</div>
+      ) : (
+        <ul className="history-list">
+          {history.map((word, index) => (
+            <li
+              key={`${word}-${index}`}
+              className="history-item"
+              onClick={() => onSelectWord(word)}
+              title={`Tra cứu lại từ "${word}"`}
+            >
+              {word}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -248,9 +344,25 @@ function WordSpeakingPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [history, setHistory] = useState([]); // State mới cho lịch sử
 
   const targetWordRef = useRef(targetWord);
   targetWordRef.current = targetWord;
+
+  // Hàm mới để lưu từ vào lịch sử
+  const handleSaveWord = (wordToSave) => {
+    const trimmedWord = wordToSave.trim();
+    if (!trimmedWord) return;
+
+    setHistory((prevHistory) => {
+      // Lọc bỏ từ đã tồn tại để đưa lên đầu
+      const filtered = prevHistory.filter(
+        (h) => h.toLowerCase() !== trimmedWord.toLowerCase()
+      );
+      // Thêm từ mới vào đầu danh sách
+      return [trimmedWord, ...filtered];
+    });
+  };
 
   const handleStartRecording = () => {
     if (!SpeechRecognition) {
@@ -271,14 +383,14 @@ function WordSpeakingPage() {
     setIsProcessing(true);
     recognition.stop();
   };
-  
+
   useEffect(() => {
     if (!recognition) return;
 
     recognition.onresult = (event) => {
       const recognizedText = event.results[0][0].transcript;
       const cleanTarget = targetWordRef.current.trim();
-      
+
       const alignment = generateAlignment(cleanTarget, recognizedText);
       const correctChars = alignment.filter((s) => s.op === "equal").length;
       const similarity =
@@ -375,7 +487,10 @@ function WordSpeakingPage() {
           </div>
         )}
 
-        <DictionaryInfo targetWord={targetWord} />
+        <DictionaryInfo 
+            targetWord={targetWord} 
+            onSave={handleSaveWord} // Truyền hàm save xuống
+        />
 
         {!isProcessing && result && (
           <div className="result-card">
@@ -405,16 +520,21 @@ function WordSpeakingPage() {
           </div>
         )}
       </div>
+      
+      {/* Thêm cột lịch sử vào đây */}
+      <HistoryPanel 
+        history={history} 
+        onSelectWord={setTargetWord} 
+      />
     </div>
   );
 }
 
-// --- Component hiển thị thông tin từ điển ---
-function DictionaryInfo({ targetWord }) {
+// --- Component hiển thị thông tin từ điển (Đã cập nhật) ---
+function DictionaryInfo({ targetWord, onSave }) { // Nhận prop onSave
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
-  // --- STATE MỚI CHO VIỆC DỊCH ---
   const [translation, setTranslation] = useState("");
   const [translationLoading, setTranslationLoading] = useState(false);
 
@@ -432,7 +552,8 @@ function DictionaryInfo({ targetWord }) {
 
     setLoading(true);
     setErr("");
-    
+    setData(null); // Xóa dữ liệu cũ khi bắt đầu tải mới
+
     fetch(
       `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(
         trimmedWord
@@ -451,7 +572,7 @@ function DictionaryInfo({ targetWord }) {
 
     return () => controller.abort();
   }, [targetWord]);
-  
+
   useEffect(() => {
     const trimmedWord = targetWord ? targetWord.trim() : "";
     if (!trimmedWord) {
@@ -463,16 +584,22 @@ function DictionaryInfo({ targetWord }) {
     const { signal } = controller;
 
     setTranslationLoading(true);
-    
-    fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(trimmedWord)}&langpair=en|vi`, { signal })
-      .then(res => res.json())
-      .then(translationData => {
+    setTranslation(""); // Xóa bản dịch cũ
+
+    fetch(
+      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
+        trimmedWord
+      )}&langpair=en|vi`,
+      { signal }
+    )
+      .then((res) => res.json())
+      .then((translationData) => {
         if (translationData.responseData) {
           setTranslation(translationData.responseData.translatedText);
         }
       })
-      .catch(err => {
-        if (err.name !== 'AbortError') {
+      .catch((err) => {
+        if (err.name !== "AbortError") {
           console.error("Lỗi dịch:", err);
         }
       })
@@ -483,12 +610,22 @@ function DictionaryInfo({ targetWord }) {
     return () => controller.abort();
   }, [targetWord]);
 
-
   if (!targetWord || !targetWord.trim()) return null;
 
   return (
     <div className="dict-card">
-      <div className="dict-header">Thông tin từ điển</div>
+      <div className="dict-header">
+        <span>Thông tin từ điển</span>
+        <button
+          className="btn-save"
+          onClick={() => onSave(targetWord)}
+          // Chỉ cho phép lưu khi có dữ liệu, không lỗi, và không đang tải
+          disabled={!data || loading || !!err}
+          title={!data ? "Không có dữ liệu để lưu" : "Lưu từ này"}
+        >
+          Lưu từ
+        </button>
+      </div>
       {loading && (
         <div
           className="dict-loading"
@@ -543,17 +680,18 @@ function DictionaryInfo({ targetWord }) {
                   <em>"{m.definitions[0].example}"</em>
                 </div>
               )}
-              
+
               {/* --- HIỂN THỊ PHẦN DỊCH TIẾNG VIỆT --- */}
               <div className="translation-section">
-                {translationLoading && <div className="translation-loading">Đang dịch...</div>}
+                {translationLoading && (
+                  <div className="translation-loading">Đang dịch...</div>
+                )}
                 {translation && !translationLoading && (
                   <div className="translation-text">
                     <strong>Dịch:</strong> {translation}
                   </div>
                 )}
               </div>
-
             </div>
           ))}
         </div>
@@ -563,4 +701,3 @@ function DictionaryInfo({ targetWord }) {
 }
 
 export default WordSpeakingPage;
-
