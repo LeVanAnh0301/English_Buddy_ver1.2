@@ -1,13 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-// --- Khởi tạo Speech Recognition API ---
 const SpeechRecognition =
   window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition;
 
 if (SpeechRecognition) {
   recognition = new SpeechRecognition();
-  recognition.continuous = false; // chỉ nhận dạng 1 lần
+  recognition.continuous = false;
   recognition.lang = "en-US";
   recognition.interimResults = false;
 } else {
@@ -15,6 +14,7 @@ if (SpeechRecognition) {
 }
 
 // --- Hàm tạo diff (so sánh phát âm) ---
+
 const generateAlignment = (target, recognized) => {
   const t = target.toLowerCase().trim();
   const r = recognized.toLowerCase().trim();
@@ -80,7 +80,7 @@ function GlobalStyles() {
         align-items: flex-start;
         min-height: 100vh;
         background-color: #f0f2f5;
-        gap: 2rem; /* Thêm khoảng cách giữa 2 cột */
+        gap: 2rem;
       }
       .word-container {
         background: white;
@@ -207,7 +207,6 @@ function GlobalStyles() {
         padding: 0.75rem 1.25rem;
         font-weight: bold;
         color: var(--text-color);
-        /* Cập nhật để chứa nút lưu */
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -228,7 +227,6 @@ function GlobalStyles() {
       .dict-phonetic {
         color: #6c757d;
       }
-      /* --- STYLE MỚI CHO PHẦN DỊCH --- */
       .translation-section {
         margin-top: 1rem;
         padding-top: 1rem;
@@ -242,8 +240,6 @@ function GlobalStyles() {
         font-style: italic;
         color: #6c757d;
       }
-
-      /* --- STYLE MỚI CHO NÚT LƯU --- */
       .btn-save {
         padding: 0.4rem 0.8rem;
         font-size: 0.85rem;
@@ -261,8 +257,6 @@ function GlobalStyles() {
         background-color: #6c757d;
         cursor: not-allowed;
       }
-
-      /* --- STYLE MỚI CHO CỘT LỊCH SỬ --- */
       .history-container {
         background: white;
         padding: 1.5rem;
@@ -270,7 +264,7 @@ function GlobalStyles() {
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
         width: 100%;
         max-width: 300px;
-        align-self: flex-start; /* Giữ cho cột này ở trên cùng */
+        align-self: flex-start;
       }
       .history-title {
         text-align: center;
@@ -284,7 +278,7 @@ function GlobalStyles() {
         list-style: none;
         padding: 0;
         margin: 0;
-        max-height: 600px; /* Giới hạn chiều cao và cho phép cuộn */
+        max-height: 600px;
         overflow-y: auto;
       }
       .history-item {
@@ -312,7 +306,7 @@ function GlobalStyles() {
   );
 }
 
-// --- Component hiển thị lịch sử (MỚI) ---
+// --- Component hiển thị lịch sử ---
 function HistoryPanel({ history, onSelectWord }) {
   return (
     <div className="history-container">
@@ -337,29 +331,49 @@ function HistoryPanel({ history, onSelectWord }) {
   );
 }
 
-// --- Component chính ---
+// --- Component chính (ĐÃ CẬP NHẬT) ---
 function WordSpeakingPage() {
   const [targetWord, setTargetWord] = useState("apple");
   const [recording, setRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
-  const [history, setHistory] = useState([]); // State mới cho lịch sử
+
+  // =================================================================
+  // THAY ĐỔI 1: Khởi tạo state từ localStorage
+  // =================================================================
+  const [history, setHistory] = useState(() => {
+    try {
+      const savedHistory = localStorage.getItem("wordSearchHistory");
+      return savedHistory ? JSON.parse(savedHistory) : [];
+    } catch (e) {
+      console.error("Không thể đọc lịch sử từ localStorage", e);
+      return []; 
+    }
+  });
 
   const targetWordRef = useRef(targetWord);
   targetWordRef.current = targetWord;
 
-  // Hàm mới để lưu từ vào lịch sử
+  // =================================================================
+  // THAY ĐỔI 2: Thêm một useEffect để theo dõi state 'history'
+  // =================================================================
+  useEffect(() => {
+    try {
+      localStorage.setItem("wordSearchHistory", JSON.stringify(history));
+    } catch (e) {
+      console.error("Không thể lưu lịch sử vào localStorage", e);
+    }
+  }, [history]); 
+
   const handleSaveWord = (wordToSave) => {
     const trimmedWord = wordToSave.trim();
     if (!trimmedWord) return;
 
     setHistory((prevHistory) => {
-      // Lọc bỏ từ đã tồn tại để đưa lên đầu
       const filtered = prevHistory.filter(
         (h) => h.toLowerCase() !== trimmedWord.toLowerCase()
       );
-      // Thêm từ mới vào đầu danh sách
       return [trimmedWord, ...filtered];
     });
   };
@@ -487,10 +501,7 @@ function WordSpeakingPage() {
           </div>
         )}
 
-        <DictionaryInfo 
-            targetWord={targetWord} 
-            onSave={handleSaveWord} // Truyền hàm save xuống
-        />
+        <DictionaryInfo targetWord={targetWord} onSave={handleSaveWord} />
 
         {!isProcessing && result && (
           <div className="result-card">
@@ -520,18 +531,15 @@ function WordSpeakingPage() {
           </div>
         )}
       </div>
-      
-      {/* Thêm cột lịch sử vào đây */}
-      <HistoryPanel 
-        history={history} 
-        onSelectWord={setTargetWord} 
-      />
+
+      <HistoryPanel history={history} onSelectWord={setTargetWord} />
     </div>
   );
 }
 
-// --- Component hiển thị thông tin từ điển (Đã cập nhật) ---
-function DictionaryInfo({ targetWord, onSave }) { // Nhận prop onSave
+// --- Component hiển thị thông tin từ điển ---
+// (Giữ nguyên, không thay đổi)
+function DictionaryInfo({ targetWord, onSave }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
@@ -552,7 +560,7 @@ function DictionaryInfo({ targetWord, onSave }) { // Nhận prop onSave
 
     setLoading(true);
     setErr("");
-    setData(null); // Xóa dữ liệu cũ khi bắt đầu tải mới
+    setData(null);
 
     fetch(
       `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(
@@ -584,7 +592,7 @@ function DictionaryInfo({ targetWord, onSave }) { // Nhận prop onSave
     const { signal } = controller;
 
     setTranslationLoading(true);
-    setTranslation(""); // Xóa bản dịch cũ
+    setTranslation("");
 
     fetch(
       `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
@@ -619,7 +627,6 @@ function DictionaryInfo({ targetWord, onSave }) { // Nhận prop onSave
         <button
           className="btn-save"
           onClick={() => onSave(targetWord)}
-          // Chỉ cho phép lưu khi có dữ liệu, không lỗi, và không đang tải
           disabled={!data || loading || !!err}
           title={!data ? "Không có dữ liệu để lưu" : "Lưu từ này"}
         >
@@ -681,7 +688,6 @@ function DictionaryInfo({ targetWord, onSave }) { // Nhận prop onSave
                 </div>
               )}
 
-              {/* --- HIỂN THỊ PHẦN DỊCH TIẾNG VIỆT --- */}
               <div className="translation-section">
                 {translationLoading && (
                   <div className="translation-loading">Đang dịch...</div>
