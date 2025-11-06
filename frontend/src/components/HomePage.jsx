@@ -28,7 +28,7 @@ function HomePage() {
       <section className="hero">
         <div className="hero-content">
           {/* <span className="badge">🐦 Nền tảng học tiếng Anh AI</span> */}
-          <h1>Học tiếng Anh thông minh cho học sinh Việt Nam</h1>
+          <h1>Học tiếng anh thông minh để sử dụng tiếng anh tự nhiên.</h1>
           <p>Luyện nói, đọc, viết và ngữ pháp cùng chú vẹt AI thông minh!</p>
           <div className="hero-buttons">
             <button onClick={handleDemoClick} className="btn-primary">
@@ -50,15 +50,15 @@ function HomePage() {
         </p>
         <div className="steps">
           <div className="step-card">
-            <h3>1. Học</h3>
-            <p>Học từ vựng và ngữ pháp theo chương trình Bộ GD&ĐT</p>
+            <h3>1. Học liệu</h3>
+            <p>Bám sát theo chương trình Bộ GD&ĐT</p>
           </div>
           <div className="step-card">
-            <h3>2. Luyện tập</h3>
+            <h3>2. Thực hành</h3>
             <p>Luyện nói với AI thông minh, nhận phản hồi tức thì</p>
           </div>
           <div className="step-card">
-            <h3>3. Phát triển</h3>
+            <h3>3. Lộ trình hoàn hảo</h3>
             <p>Theo dõi tiến độ và nhận chứng chỉ hoàn thành</p>
           </div>
         </div>
@@ -67,7 +67,7 @@ function HomePage() {
       <section className="features-section">
         <div className="features-content">
           <h2>Tại Sao Chọn English Buddy?</h2>
-          <p>Khám phá các tính năng mạnh mẽ giúp việc học tiếng Anh trở nên dễ dàng và hiệu quả</p>
+          <p>Học để sử dụng. Học để thành công. </p>
         </div>
         <div className="features-grid">
           <div className="feature-card">
