@@ -103,7 +103,7 @@ function Navbar() {
           </a>
         </li>
         <li>
-          <a href="#about" onClick={handleNavClick("about")} className={active === "about" ? "active" : undefined}>
+          <a href="#about" onClick={handleDirectNav("about")} className={active === "about" ? "active" : undefined}>
             Giới thiệu
           </a>
         </li>

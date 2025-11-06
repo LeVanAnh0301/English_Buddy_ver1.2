@@ -1,0 +1,87 @@
+/* ===== About Page New Style (White - Blue Education Theme) ===== */
+
+/* Global */
+.about-wrapper {
+  font-family: "Inter", Arial, sans-serif;
+  color: #1e293b;
+  background: white;
+}
+
+/* Hero */
+.about-hero {
+  padding: 80px 5vw;
+  background: linear-gradient(90deg, #2563eb, #1e3a8a);
+  color: white;
+  text-align: left;
+}
+
+.about-hero h1 {
+  font-size: 44px;
+  margin-bottom: 20px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.about-hero p {
+  font-size: 18px;
+  line-height: 1.7;
+  max-width: 720px;
+}
+
+/* Section */
+.about-section {
+  padding: 70px 5vw;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.about-section h2 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #2563eb;
+  margin-bottom: 16px;
+  border-left: 6px solid #2563eb;
+  padding-left: 14px;
+}
+
+.about-section p {
+  font-size: 18px;
+  line-height: 1.7;
+  margin-bottom: 24px;
+  color: #334155;
+}
+
+/* Simple bullet list */
+.about-section ul {
+  margin-top: 12px;
+  padding-left: 20px;
+}
+
+.about-section li {
+  margin-bottom: 10px;
+  line-height: 1.6;
+  font-size: 17px;
+  color: #475569;
+}
+
+/* Vision statement */
+.about-vision {
+  background: #f0f7ff;
+  padding: 60px 5vw;
+  text-align: center;
+}
+
+.about-vision h2 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #2563eb;
+  margin-bottom: 16px;
+}
+
+.about-vision p {
+  font-size: 18px;
+  color: #334155;
+  max-width: 700px;
+  margin: 0 auto;
+  line-height: 1.8;
+}

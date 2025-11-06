@@ -7,6 +7,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import WordSpeakingPage from "./WordSpeakingPage";
 import CreateVideoPage from "./CreateVideoPage";
+import AboutPage from "./AboutPage";
 import "./App.css";
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
         <Route path="/video/:id" element={<VideoDetailPage />} />
         <Route path="/videos/new" element={<CreateVideoPage />} />
         <Route path="/word-speaking" element={<WordSpeakingPage />} />
+        <Route path="/about" element={<AboutPage />} />
       </Routes>
 
       {/* Footer luôn hiển thị */}
