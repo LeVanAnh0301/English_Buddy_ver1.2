@@ -22,23 +22,55 @@ def generate_comprehension_questions(transcript: str, title: str) -> List[Dict[s
     Trả về list các câu hỏi hợp lệ (dict)
     """
     prompt = f"""
-    You are an expert English comprehension exercise generator.
-    Generate 10-15 questions from transcript below.
-    Questions must have CEFR levels from A1 to C1 and use JSON keys:
-    'difficulty' -> level, 'answer' -> expected_answer_points.
+    You are an expert ESL (English as a Second Language) curriculum designer.
+    Your goal is to create questions that not only test comprehension but also
+    promote CRITICAL THINKING and SPEAKING PRACTICE.
+
+    Generate 15-20 questions based on the transcript below.
+
+    RULES:
+    1.  **Question Count:** Strictly generate 15-20 questions.
+    2.  **Difficulty Range:** Must cover all levels from A1 (simple facts) to C1 (complex analysis).
+    3.  **Question Types (THIS IS CRITICAL):**
+        * **Avoid simple, low-effort questions** (e.g., "Who is Peppa?") unless they are for A1 level.
+        * Include "Why" and "How" questions.
+        * Include **open-ended, analytical, and personal opinion questions** that require the student to elaborate.
+        * For B2-C1 levels, questions should ask the student to *infer*, *evaluate*, or *relate the topic to their own personal experience*. These questions are designed to be "speaking prompts".
 
     Title: "{title}"
     Transcript: {transcript[:15000]}
 
-    Output strictly valid JSON like:
+    Output strictly valid JSON.
+    * For fact-based questions, 'answer' should list key points.
+    * For opinion/speaking prompts, 'answer' can be an empty list [] or ["Student's personal opinion"].
+
+    JSON FORMAT:
     {{
         "title": "{title}",
         "questions": [
             {{
                 "difficulty": "A1",
-                "question": "Example question?",
-                "answer": ["point1", "point2"],
-                "question_type": "open_ended"
+                "question": "What is the name of Peppa's little brother?",
+                "answer": ["George"],
+                "question_type": "factual"
+            }},
+            {{
+                "difficulty": "B1",
+                "question": "Why did Daddy Pig initially think the party was just a game?",
+                "answer": ["He didn't realize it was a real party", "He thought it was just make-believe"],
+                "question_type": "inference"
+            }},
+            {{
+                "difficulty": "B2",
+                "question": "How did Miss Rabbit manage to create the entire 'undersea world' in just one night?",
+                "answer": ["The transcript doesn't say, but it shows she is very efficient and resourceful"],
+                "question_type": "analysis"
+            }},
+            {{
+                "difficulty": "C1",
+                "question": "The party theme was 'undersea' and required a lot of imagination. In your opinion, why is imaginative play important for people (not just children)?",
+                "answer": ["Student's personal opinion"],
+                "question_type": "opinion"
             }}
         ]
     }}
