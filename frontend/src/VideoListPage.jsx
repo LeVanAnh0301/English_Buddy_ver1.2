@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { FaPlay, FaMagic } from "react-icons/fa";
+import { FaPlay, FaMagic, FaTrash } from "react-icons/fa"; // Added FaTrash
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -11,6 +11,10 @@ function VideoListPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    fetchVideos();
+  }, []);
+
+  const fetchVideos = () => {
     axios
       .get(`${BACKEND_URL}/api/videos/`)
       .then((res) => {
@@ -26,7 +30,7 @@ function VideoListPage() {
       })
       .catch((err) => console.error("Error fetching videos:", err))
       .finally(() => setLoading(false));
-  }, []);
+  };
 
   const handleClick = (id) => {
     navigate(`/video/${id}`);
@@ -34,6 +38,28 @@ function VideoListPage() {
 
   const handleGenerateVideo = () => {
     navigate("/videos/new");
+  };
+
+  // --- NEW: Handle Delete Logic ---
+  const handleDelete = async (e, id) => {
+    // 1. Prevent the card click event (which navigates to detail page)
+    e.stopPropagation();
+
+    // 2. Confirmation Popup
+    const isConfirmed = window.confirm("Bạn có chắc chắn muốn xoá video này không?");
+    if (!isConfirmed) return;
+
+    try {
+      // 3. Call API
+      await axios.delete(`${BACKEND_URL}/api/videos/${id}`);
+
+      // 4. Update UI immediately (Optimistic UI)
+      setVideos((prevVideos) => prevVideos.filter((video) => video.id !== id));
+      alert("Xoá video thành công!");
+    } catch (err) {
+      console.error("Error deleting video:", err);
+      alert("Lỗi: Không thể xoá video này.");
+    }
   };
 
   if (loading) {
@@ -49,6 +75,8 @@ function VideoListPage() {
       <h1 style={{ textAlign: "center", marginBottom: "30px" }}>
         🎥 Danh sách Video Học Tập
       </h1>
+      
+      {/* Floating Action Button (Unchanged) */}
       <div
         style={{
           position: "fixed",
@@ -67,14 +95,13 @@ function VideoListPage() {
             padding: "10px 16px",
             borderRadius: "12px",
             boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            animation: "fadeInRight 0.5s ease", // Hiệu ứng xuất hiện
+            animation: "fadeInRight 0.5s ease",
             fontWeight: "500",
           }}
         >
           Bấm vào đây để tạo video học tập
         </div>
 
-        {/* 2. Nút Icon (như cũ) */}
         <div
           style={{
             background: "linear-gradient(135deg, #00b4d8, #0077b6)",
@@ -89,16 +116,14 @@ function VideoListPage() {
             cursor: "pointer",
             animation: "pulse 2s infinite",
           }}
-          title="Tạo video học tập mới" // Vẫn giữ title gốc
+          title="Tạo video học tập mới"
           onClick={handleGenerateVideo}
         >
           <FaMagic size={28} />
         </div>
       </div>
 
-      {/* ❌ Đã XÓA BỎ khối 'message && ...' bị comment */}
-
-      {/* GRID VIDEO (Giữ nguyên) */}
+      {/* GRID VIDEO */}
       <div
         style={{
           display: "grid",
@@ -122,6 +147,7 @@ function VideoListPage() {
                 boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
                 overflow: "hidden",
                 transition: "transform 0.2s",
+                position: "relative" // For potential absolute positioning
               }}
             >
               <img
@@ -135,30 +161,64 @@ function VideoListPage() {
                 }}
                 onClick={() => handleClick(video.id)}
               />
+              
               <div style={{ padding: "15px" }}>
-                <h3 style={{ margin: "0 0 10px" }}>{video.title}</h3>
-                <button
-                  onClick={() => handleClick(video.id)}
-                  style={{
-                    marginTop: "10px",
-                    padding: "10px 15px",
-                    border: "none",
-                    borderRadius: "6px",
-                    background: "#007bff",
-                    color: "#fff",
-                    cursor: "pointer",
-                    width: "100%",
+                <h3 
+                  style={{ 
+                    margin: "0 0 10px",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis"
                   }}
+                  title={video.title}
                 >
-                  Học ngay →
-                </button>
+                  {video.title}
+                </h3>
+                
+                {/* BUTTON GROUP: Learn & Delete */}
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button
+                    onClick={() => handleClick(video.id)}
+                    style={{
+                      flex: 1, // Takes available space
+                      padding: "10px 15px",
+                      border: "none",
+                      borderRadius: "6px",
+                      background: "#007bff",
+                      color: "#fff",
+                      cursor: "pointer",
+                      fontWeight: "bold"
+                    }}
+                  >
+                    Học ngay →
+                  </button>
+
+                  {/* NEW: Delete Button */}
+                  <button
+                    onClick={(e) => handleDelete(e, video.id)}
+                    style={{
+                      padding: "10px 15px",
+                      border: "none",
+                      borderRadius: "6px",
+                      background: "#dc3545", // Red danger color
+                      color: "#fff",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}
+                    title="Xoá video này"
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Hiệu ứng keyframes */}
+      {/* STYLES (Unchanged) */}
       <style>{`
         @keyframes pulse {
           0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,123,255,0.4); }
@@ -166,12 +226,6 @@ function VideoListPage() {
           100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,123,255,0); }
         }
         
-        /* 'fadeInUp' không còn dùng nhưng tôi vẫn giữ, 'fadeInRight' được thêm vào */
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
         @keyframes fadeInRight {
           from { opacity: 0; transform: translateX(20px); }
           to { opacity: 1; transform: translateX(0); }
