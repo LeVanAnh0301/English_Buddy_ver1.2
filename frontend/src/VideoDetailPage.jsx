@@ -20,6 +20,7 @@ function VideoDetailPage() {
   // --- STATE UI & LOGIC ---
   const [videoEnded, setVideoEnded] = useState(false); // Đánh dấu đã xem xong video chưa
   const [showQuestionText, setShowQuestionText] = useState(false); // Ẩn/Hiện text câu hỏi
+  const [showVideoOverlay, setShowVideoOverlay] = useState(false); // ✅ STATE MỚI: Để che video lại
   
   // --- STATE GHI ÂM ---
   const [isRecording, setIsRecording] = useState(false);
@@ -35,34 +36,27 @@ function VideoDetailPage() {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const recognitionRef = useRef(null);
+  const playerRef = useRef(null); 
 
   // ==========================================================
   // 🔊 HÀM ĐỌC VĂN BẢN (Text-to-Speech) - CHẬM & RÕ
   // ==========================================================
   const speakQuestion = (text) => {
     if (!window.speechSynthesis) return;
-    
-    // 1. Dừng giọng đọc cũ (nếu có)
     window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(text);
-    
-    // ✅ CẤU HÌNH GIỌNG ĐỌC
     utterance.lang = "en-US"; 
-    utterance.rate = 0.7;     // 🐢 Tốc độ 0.7 (Chậm, phù hợp luyện nghe)
-    utterance.pitch = 1;      // Cao độ bình thường
-    utterance.volume = 1;     // Âm lượng to nhất
+    utterance.rate = 0.7;     
+    utterance.pitch = 1;      
+    utterance.volume = 1;     
 
-    // 2. Thử tìm giọng Google US English (nếu trình duyệt hỗ trợ)
     const voices = window.speechSynthesis.getVoices();
     const preferredVoice = voices.find(
       (v) => v.name.includes("Google US English") || v.name.includes("Samantha")
     );
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
-    }
+    if (preferredVoice) utterance.voice = preferredVoice;
 
-    // 3. Phát âm thanh
     window.speechSynthesis.speak(utterance);
   };
 
@@ -82,9 +76,9 @@ function VideoDetailPage() {
         setExercises(questionsFromApi);
         setCurrentQuestion(questionsFromApi[0] || null);
         
-        // Reset trạng thái khi vào trang mới
         setVideoEnded(false);
         setShowQuestionText(false); 
+        setShowVideoOverlay(false); // Reset overlay
 
       } catch (err) {
         console.error("❌ Error fetching exercise details:", err);
@@ -97,26 +91,64 @@ function VideoDetailPage() {
   }, [id]);
 
   // ==========================================================
-  // 🎬 XỬ LÝ VIDEO YOUTUBE
+  // 🎬 XỬ LÝ VIDEO YOUTUBE (LOGIC CHE PHỦ)
   // ==========================================================
+  
+  const onPlayerReady = (event) => {
+    playerRef.current = event.target;
+  };
+
   const onVideoEnd = () => {
+    if (videoEnded) return;
+
     console.log("🎬 Video finished!");
     setVideoEnded(true);
+    setShowVideoOverlay(true); // ✅ Bật tấm màn che lên ngay lập tức
 
-    // Sau khi video kết thúc 500ms -> Máy tự đọc câu hỏi đầu tiên
     setTimeout(() => {
       if (currentQuestion) {
-        console.log("🔊 Auto playing audio...");
         speakQuestion(currentQuestion.question);
       }
     }, 500);
   };
 
+  // ✅ Hàm để xem lại video (Reset Overlay và tua về đầu)
+  const handleReplayVideo = () => {
+    if (playerRef.current) {
+        setShowVideoOverlay(false); // Tắt màn che
+        setVideoEnded(false);       // Reset trạng thái kết thúc
+        playerRef.current.seekTo(0); // Tua về 0
+        playerRef.current.playVideo(); // Chạy lại
+    }
+  };
+
+  // 3. EFFECT: Kiểm tra thời gian video liên tục
+  useEffect(() => {
+    const checkInterval = setInterval(() => {
+      if (playerRef.current && !videoEnded && typeof playerRef.current.getCurrentTime === 'function') {
+        try {
+          const currentTime = playerRef.current.getCurrentTime();
+          const duration = playerRef.current.getDuration();
+
+          // Nếu duration > 0 và còn <= 3 giây nữa là hết bài
+          if (duration > 0 && (duration - currentTime) <= 3) {
+            console.log("🛑 Stopping video 3s early & masking...");
+            playerRef.current.pauseVideo(); // Dừng video
+            onVideoEnd(); // Gọi hàm kết thúc
+          }
+        } catch (error) {}
+      }
+    }, 500);
+
+    return () => clearInterval(checkInterval);
+  }, [videoEnded]); 
+
   const youtubeOpts = {
     height: '390',
     width: '100%',
     playerVars: {
-      autoplay: 0, // Không tự chạy video khi mới vào trang
+      autoplay: 0, 
+      rel: 0, 
     },
   };
 
@@ -127,7 +159,7 @@ function VideoDetailPage() {
     try {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
-        alert("Trình duyệt không hỗ trợ SpeechRecognition (hãy dùng Chrome/Edge)");
+        alert("Trình duyệt không hỗ trợ SpeechRecognition");
         return;
       }
 
@@ -170,7 +202,7 @@ function VideoDetailPage() {
       setIsRecording(true);
     } catch (err) {
       console.error("🎙️ Microphone error:", err);
-      alert("Không thể truy cập micro. Hãy kiểm tra cài đặt trình duyệt.");
+      alert("Không thể truy cập micro.");
     }
   };
 
@@ -186,7 +218,7 @@ function VideoDetailPage() {
     setAudioBlob(null);
     setRecordingTranscript("");
     setEvaluationResult(null);
-    setShowQuestionText(false); // Ẩn text lại nếu muốn thử lại từ đầu
+    setShowQuestionText(false); 
   };
 
   // ==========================================================
@@ -211,7 +243,7 @@ function VideoDetailPage() {
       });
       
       setEvaluationResult(res.data);
-      setShowQuestionText(true); // ✅ QUAN TRỌNG: Hiện text câu hỏi sau khi nộp bài
+      setShowQuestionText(true); 
 
     } catch (err) {
       console.error("❌ Evaluate error:", err);
@@ -221,7 +253,7 @@ function VideoDetailPage() {
         feedback: "Có lỗi khi chấm điểm.",
         suggestion: "Vui lòng thử lại.",
       });
-      setShowQuestionText(true); // Vẫn hiện text nếu lỗi để người dùng biết
+      setShowQuestionText(true); 
     } finally {
       setIsProcessing(false);
     }
@@ -235,13 +267,11 @@ function VideoDetailPage() {
       setCurrentIndex(nextIdx);
       setCurrentQuestion(nextQ);
       
-      // Reset trạng thái
       setEvaluationResult(null);
       setRecordingTranscript("");
       setAudioBlob(null);
-      setShowQuestionText(false); // Ẩn text của câu mới
+      setShowQuestionText(false); 
       
-      // ✅ Tự động đọc câu hỏi mới sau 500ms
       setTimeout(() => {
         speakQuestion(nextQ.question);
       }, 500); 
@@ -251,7 +281,6 @@ function VideoDetailPage() {
     }
   };
 
-  // Helper style button
   const btnStyle = (bg, color = "white") => ({
     backgroundColor: bg,
     color: color,
@@ -278,20 +307,55 @@ function VideoDetailPage() {
 
           <h3 style={{ marginTop: "20px" }}>Video Listening</h3>
 
-          {/* YouTube Player */}
-          <div style={{ borderRadius: "8px", overflow: "hidden", background: "#000" }}>
+          {/* Wrapper cho Video và Overlay */}
+          <div style={{ position: "relative", borderRadius: "8px", overflow: "hidden", background: "#000", height: "390px" }}>
+            
+            {/* 1. YouTube Player */}
             {youtubeId ? (
               <YouTube 
                 videoId={youtubeId} 
                 opts={youtubeOpts} 
-                onEnd={onVideoEnd} // Sự kiện khi video hết
+                onReady={onPlayerReady} 
               />
             ) : (
-              !isLoadingExercise && <p>Không tìm thấy Video.</p>
+              !isLoadingExercise && <p style={{color: 'white', padding: 20}}>Không tìm thấy Video.</p>
             )}
+
+            {/* 2. ✅ OVERLAY CHE PHỦ (Hiện ra khi video kết thúc/ngắt sớm) */}
+            {showVideoOverlay && (
+              <div style={{
+                position: "absolute",
+                top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: "rgba(0, 0, 0, 0.9)", // Màu nền đen che video
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "white",
+                zIndex: 10 // Đè lên iframe youtube
+              }}>
+                <div style={{fontSize: "50px"}}>✅</div>
+                <h3>Hoàn thành video!</h3>
+                <p>Hãy chuyển sang phần bài tập bên cạnh.</p>
+                <button 
+                  onClick={handleReplayVideo}
+                  style={{
+                    marginTop: "10px",
+                    padding: "8px 16px",
+                    background: "transparent",
+                    border: "1px solid white",
+                    color: "white",
+                    borderRadius: "4px",
+                    cursor: "pointer"
+                  }}
+                >
+                  🔄 Xem lại video
+                </button>
+              </div>
+            )}
+
           </div>
 
-          {/* ✅ KHU VỰC HƯỚNG DẪN (GIỮ NGUYÊN) */}
           <div
             style={{
               marginTop: "15px",
@@ -320,13 +384,11 @@ function VideoDetailPage() {
             <p>⏳ Đang tải bài tập...</p>
           ) : currentQuestion ? (
             
-            // Logic: Chỉ hiện bài tập khi video đã xem xong (videoEnded = true)
             videoEnded ? (
               <div style={{ background: "#fff", borderRadius: "8px", padding: "20px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
                 
                 <h4>Câu hỏi {currentIndex + 1}:</h4>
                 
-                {/* LOGIC HIỂN THỊ CÂU HỎI: Ẩn Text / Hiện Text */}
                 <div style={{
                     background: showQuestionText ? "#e3f2fd" : "#f1f3f5",
                     color: showQuestionText ? "#0d47a1" : "#666",
@@ -353,7 +415,6 @@ function VideoDetailPage() {
                   )}
                 </div>
                 
-                {/* Nút nghe lại thủ công */}
                 <div style={{textAlign: 'center', marginTop: 10}}>
                    <button 
                         onClick={() => speakQuestion(currentQuestion.question)}
@@ -363,7 +424,6 @@ function VideoDetailPage() {
                     </button>
                 </div>
 
-                {/* Khu vực Ghi âm */}
                 <div style={{ marginTop: "30px", textAlign: 'center' }}>
                   {!audioBlob ? (
                     <>
@@ -397,7 +457,6 @@ function VideoDetailPage() {
                   )}
                 </div>
 
-                {/* Khu vực Kết quả */}
                 {evaluationResult && (
                   <div style={{ marginTop: "25px", background: "#f1f8e9", padding: "20px", borderRadius: "8px", border: "1px solid #c5e1a5" }}>
                     <h4 style={{marginTop: 0, color: "#2e7d32"}}>Kết quả chấm điểm: {evaluationResult.score}/100</h4>
@@ -405,7 +464,6 @@ function VideoDetailPage() {
                     <p><strong>📝 Feedback:</strong> {evaluationResult.feedback}</p>
                     {evaluationResult.suggestion && <p>💡 <strong>Gợi ý cải thiện:</strong> {evaluationResult.suggestion}</p>}
                     
-                    {/* Nút Next Question */}
                     <div style={{textAlign: 'right', marginTop: '20px'}}>
                         <button onClick={nextQuestion} style={btnStyle("#17a2b8")}>
                         Câu tiếp theo 👉
