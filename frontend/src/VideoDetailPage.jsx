@@ -41,24 +41,57 @@ function VideoDetailPage() {
   // ==========================================================
   // 🔊 HÀM ĐỌC VĂN BẢN (Text-to-Speech) - CHẬM & RÕ
   // ==========================================================
-  const speakQuestion = (text) => {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "en-US"; 
-    utterance.rate = 0.7;     
-    utterance.pitch = 1;      
-    utterance.volume = 1;     
+const speakQuestion = (text) => {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
 
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "en-US";
+  utterance.rate = 0.85;  
+  utterance.pitch = 1.1;  
+  utterance.volume = 1;
+
+  const setVoice = () => {
     const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(
-      (v) => v.name.includes("Google US English") || v.name.includes("Samantha")
-    );
-    if (preferredVoice) utterance.voice = preferredVoice;
+    
+    const preferredVoices = [
+      "Google US English",
+      "Samantha",
+      "Karen",
+      "Microsoft Zira - English (United States)",
+      "Microsoft David - English (United States)",
+      "Alex"
+    ];
+
+    let selectedVoice = null;
+    for (let name of preferredVoices) {
+      selectedVoice = voices.find(v => v.name.includes(name));
+      if (selectedVoice) break;
+    }
+
+    // Nếu không tìm thấy, dùng giọng en-US đầu tiên
+    if (!selectedVoice) {
+      selectedVoice = voices.find(v => v.lang.startsWith("en-US"));
+    }
+
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+      console.log("🎤 Using voice:", selectedVoice.name);
+    }
 
     window.speechSynthesis.speak(utterance);
   };
+
+  // Xử lý trường hợp voices chưa load
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length > 0) {
+    setVoice();
+  } else {
+    window.speechSynthesis.onvoiceschanged = setVoice;
+  }
+};
+
 
   // ==========================================================
   // 📥 FETCH DATA
