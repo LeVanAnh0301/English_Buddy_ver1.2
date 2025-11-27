@@ -1,10 +1,16 @@
 from fastapi import APIRouter, UploadFile, Form, HTTPException, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from backend.database import get_db
 from backend.models import ListeningExercise
 from backend.services.ai_service import ai_evaluate_listening
 import tempfile
 import os
+import logging
+import traceback
+
+logger = logging.getLogger("api_debug")
+logging.basicConfig(level=logging.INFO)
 
 router = APIRouter()
 
@@ -18,58 +24,84 @@ def evaluate_listening(
 ):
     """
     Evaluate a student's answer for a specific listening question.
-
-    Parameters:
-    - question_id: The ID of the question within the exercise's content.questions list.
-    - user_answer: The student's answer as text.
-    - exercise_id: The ID of the ListeningExercise in the database.
-
-    Returns:
-    - A JSON object containing:
-        - general: "correct" or "incorrect"
-        - score: overall score (0-100)
-        - details: breakdown of fluency, pronunciation, vocabulary (0-100 each)
-        - feedback: short feedback sentence from AI
-        - suggestion: optional advice if the answer is incorrect
     """
+    try:
+        try:
+            exercise = db.query(ListeningExercise).filter_by(id=exercise_id).first()
+        except SQLAlchemyError as db_err:
+            logger.error(f"❌ Database Error: {str(db_err)}")
+            raise HTTPException(status_code=500, detail="Database connection failed")
 
-    exercise: ListeningExercise = db.query(ListeningExercise).filter_by(id=exercise_id).first()
-    if not exercise:
-        raise HTTPException(status_code=404, detail="Exercise not found")
+        if not exercise:
+            raise HTTPException(status_code=404, detail="Exercise not found")
 
-    content = exercise.content
-    if "questions" not in content:
-        raise HTTPException(status_code=400, detail="Exercise content invalid")
+        content = exercise.content
+        if not content or "questions" not in content:
+            raise HTTPException(status_code=400, detail="Exercise content invalid")
 
-    question_data = next((q for q in content["questions"] if q.get("id") == question_id), None)
-    if not question_data:
-        raise HTTPException(status_code=404, detail="Question not found")
+        try:
+            question_data = next((q for q in content["questions"] if str(q.get("id")) == str(question_id)), None)
+        except Exception as e:
+            logger.error(f"❌ Error filtering questions: {e}")
+            raise HTTPException(status_code=500, detail="Error processing questions list")
 
-    correct_answer = ", ".join(question_data.get("expected_answer_points", []))
-    ai_result = ai_evaluate_listening(correct_answer, user_answer)
+        if not question_data:
+            raise HTTPException(status_code=404, detail="Question not found")
 
-    if "error" in ai_result:
-        raise HTTPException(status_code=500, detail=f"AI evaluation failed: {ai_result['error']}")
+        expected_points = question_data.get("expected_answer_points", [])
+        if not isinstance(expected_points, list):
+             expected_points = [str(expected_points)]
+             
+        correct_answer = ", ".join(expected_points)
+        
+        logger.info(f"🤖 Calling AI for Question {question_id} | User Answer: {user_answer}")
+        
+        try:
+            ai_result = ai_evaluate_listening(correct_answer, user_answer)
+        except Exception as ai_crash:
+            logger.error(f"❌ AI Service CRASHED: {traceback.format_exc()}")
+            raise HTTPException(status_code=500, detail=f"AI Service Internal Error: {str(ai_crash)}")
 
-    general = "correct" if ai_result.get("score", 0) >= 70 else "incorrect"
-    details = {
-        "fluency": ai_result.get("fluency", 100),
-        "pronunciation": ai_result.get("pronunciation", 100),
-        "vocabulary": ai_result.get("vocabulary", 100),
-    }
-    feedback = ai_result.get("feedback", "")
-    suggestion = None
-    if general == "incorrect":
-        suggestion = f"Expected points: {correct_answer}"
+        if "error" in ai_result:
+            logger.error(f"❌ AI returned error: {ai_result['error']}")
+            raise HTTPException(status_code=500, detail=f"AI evaluation failed: {ai_result['error']}")
 
-    return {
-        "general": general,
-        "score": ai_result.get("score", 0),
-        "details": details,
-        "feedback": feedback,
-        "suggestion": suggestion
-    }
+        final_score = ai_result.get("overall_score", 0)
 
+        general = ai_result.get("general", "incorrect")
+        
+        if final_score < 40:
+            general = "incorrect"
+
+        raw_details = ai_result.get("details", {})
+        
+        formatted_details = {
+            "fluency": raw_details.get("fluency", {}).get("score", 0),
+            "vocabulary": raw_details.get("vocabulary", {}).get("score", 0),
+            "pronunciation": raw_details.get("grammar", {}).get("score", 0), 
+            "grammar": raw_details.get("grammar", {}).get("score", 0)
+        }
+
+        feedback = ai_result.get("feedback", "")
+        suggestion = ai_result.get("suggestion", "")
+        
+        if general == "incorrect" and not suggestion:
+            suggestion = f"Key points needed: {correct_answer}"
+
+        return {
+            "general": general,
+            "score": final_score,
+            "details": formatted_details,
+            "feedback": feedback,
+            "suggestion": suggestion
+        }
+
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as e:
+        error_msg = traceback.format_exc()
+        logger.error(f"🔥 UNEXPECTED SERVER ERROR 🔥\n{error_msg}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
 @router.post("/upload-audio")
