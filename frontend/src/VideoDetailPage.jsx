@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import axios from "axios";
-import YouTube from "react-youtube"; // Đảm bảo bạn đã chạy: npm install react-youtube
+import YouTube from "react-youtube";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
+const SUCCESS_SOUND_URL = "https://actions.google.com/sounds/v1/cartoon/magic_chime.ogg"; 
 
 function VideoDetailPage() {
   const { id } = useParams();
@@ -18,10 +20,15 @@ function VideoDetailPage() {
   const [exerciseId, setExerciseId] = useState(null);
 
   // --- STATE UI & LOGIC ---
-  const [videoEnded, setVideoEnded] = useState(false); // Đánh dấu đã xem xong video chưa
-  const [showQuestionText, setShowQuestionText] = useState(false); // Ẩn/Hiện text câu hỏi
-  const [showVideoOverlay, setShowVideoOverlay] = useState(false); // ✅ STATE MỚI: Để che video lại
+  const [videoEnded, setVideoEnded] = useState(false);
+  const [showQuestionText, setShowQuestionText] = useState(false);
+  const [showVideoOverlay, setShowVideoOverlay] = useState(false);
   
+  // ✅ STATE MỚI: THEO DÕI KẾT QUẢ VÀ TỔNG KẾT
+  const [correctCount, setCorrectCount] = useState(0);
+  const [resultsHistory, setResultsHistory] = useState([]); // Lưu danh sách kết quả từng câu
+  const [isFinished, setIsFinished] = useState(false);      // Đánh dấu hoàn thành tất cả câu hỏi
+
   // --- STATE GHI ÂM ---
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -39,59 +46,44 @@ function VideoDetailPage() {
   const playerRef = useRef(null); 
 
   // ==========================================================
-  // 🔊 HÀM ĐỌC VĂN BẢN (Text-to-Speech) - CHẬM & RÕ
+  // ✅ HÀM PHÁT ÂM THANH
   // ==========================================================
-
-const speakQuestion = (text) => {
-  if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "en-US";
-  utterance.rate = 0.85;  
-  utterance.pitch = 1.1;  
-  utterance.volume = 1;
-
-  const setVoice = () => {
-    const voices = window.speechSynthesis.getVoices();
-    
-    const preferredVoices = [
-      "Google US English",
-      "Samantha",
-      "Karen",
-      "Microsoft Zira - English (United States)",
-      "Microsoft David - English (United States)",
-      "Alex"
-    ];
-
-    let selectedVoice = null;
-    for (let name of preferredVoices) {
-      selectedVoice = voices.find(v => v.name.includes(name));
-      if (selectedVoice) break;
-    }
-
-    // Nếu không tìm thấy, dùng giọng en-US đầu tiên
-    if (!selectedVoice) {
-      selectedVoice = voices.find(v => v.lang.startsWith("en-US"));
-    }
-
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
-      console.log("🎤 Using voice:", selectedVoice.name);
-    }
-
-    window.speechSynthesis.speak(utterance);
+  const playSuccessSound = () => {
+    const audio = new Audio(SUCCESS_SOUND_URL);
+    audio.volume = 0.5;
+    audio.play().catch(e => console.log("Audio play failed (user interaction needed):", e));
   };
 
-  // Xử lý trường hợp voices chưa load
-  const voices = window.speechSynthesis.getVoices();
-  if (voices.length > 0) {
-    setVoice();
-  } else {
-    window.speechSynthesis.onvoiceschanged = setVoice;
-  }
-};
+  // ==========================================================
+  // 🔊 HÀM ĐỌC VĂN BẢN (Text-to-Speech)
+  // ==========================================================
+  const speakQuestion = (text) => {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
 
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "en-US";
+    utterance.rate = 0.85;  
+    utterance.pitch = 1.1;  
+    utterance.volume = 1;
+
+    const setVoice = () => {
+      const voices = window.speechSynthesis.getVoices();
+      const preferredVoices = ["Google US English", "Samantha", "Karen", "Microsoft Zira", "Alex"];
+      let selectedVoice = null;
+      for (let name of preferredVoices) {
+        selectedVoice = voices.find(v => v.name.includes(name));
+        if (selectedVoice) break;
+      }
+      if (!selectedVoice) selectedVoice = voices.find(v => v.lang.startsWith("en-US"));
+      if (selectedVoice) utterance.voice = selectedVoice;
+      window.speechSynthesis.speak(utterance);
+    };
+
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) setVoice();
+    else window.speechSynthesis.onvoiceschanged = setVoice;
+  };
 
   // ==========================================================
   // 📥 FETCH DATA
@@ -101,17 +93,21 @@ const speakQuestion = (text) => {
       try {
         setIsLoadingExercise(true);
         const res = await axios.get(`${BACKEND_URL}/api/listening/exercises/${id}`);
-        const videoIdFromApi = res.data.source?.youtube_video_id || "";
         const questionsFromApi = res.data.content?.questions || [];
 
         setExerciseId(res.data.id);
-        setYoutubeId(videoIdFromApi);
+        setYoutubeId(res.data.source?.youtube_video_id || "");
         setExercises(questionsFromApi);
         setCurrentQuestion(questionsFromApi[0] || null);
         
         setVideoEnded(false);
         setShowQuestionText(false); 
-        setShowVideoOverlay(false); // Reset overlay
+        setShowVideoOverlay(false);
+        
+        // Reset Score states
+        setCorrectCount(0);
+        setResultsHistory([]);
+        setIsFinished(false);
 
       } catch (err) {
         console.error("❌ Error fetching exercise details:", err);
@@ -124,65 +120,48 @@ const speakQuestion = (text) => {
   }, [id]);
 
   // ==========================================================
-  // 🎬 XỬ LÝ VIDEO YOUTUBE (LOGIC CHE PHỦ)
+  // 🎬 XỬ LÝ VIDEO YOUTUBE
   // ==========================================================
-  
-  const onPlayerReady = (event) => {
-    playerRef.current = event.target;
-  };
+  const onPlayerReady = (event) => { playerRef.current = event.target; };
 
   const onVideoEnd = () => {
     if (videoEnded) return;
-
-    console.log("🎬 Video finished!");
     setVideoEnded(true);
-    setShowVideoOverlay(true); // ✅ Bật tấm màn che lên ngay lập tức
-
+    setShowVideoOverlay(true);
     setTimeout(() => {
-      if (currentQuestion) {
-        speakQuestion(currentQuestion.question);
-      }
+      if (currentQuestion) speakQuestion(currentQuestion.question);
     }, 500);
   };
 
-  // ✅ Hàm để xem lại video (Reset Overlay và tua về đầu)
   const handleReplayVideo = () => {
     if (playerRef.current) {
-        setShowVideoOverlay(false); // Tắt màn che
-        setVideoEnded(false);       // Reset trạng thái kết thúc
-        playerRef.current.seekTo(0); // Tua về 0
-        playerRef.current.playVideo(); // Chạy lại
+        setShowVideoOverlay(false);
+        setVideoEnded(false);
+        playerRef.current.seekTo(0);
+        playerRef.current.playVideo();
     }
   };
 
-  // 3. EFFECT: Kiểm tra thời gian video liên tục
   useEffect(() => {
     const checkInterval = setInterval(() => {
       if (playerRef.current && !videoEnded && typeof playerRef.current.getCurrentTime === 'function') {
         try {
           const currentTime = playerRef.current.getCurrentTime();
           const duration = playerRef.current.getDuration();
-
-          // Nếu duration > 0 và còn <= 3 giây nữa là hết bài
           if (duration > 0 && (duration - currentTime) <= 3) {
-            console.log("🛑 Stopping video 3s early & masking...");
-            playerRef.current.pauseVideo(); // Dừng video
-            onVideoEnd(); // Gọi hàm kết thúc
+            playerRef.current.pauseVideo();
+            onVideoEnd();
           }
         } catch (error) {}
       }
     }, 500);
-
     return () => clearInterval(checkInterval);
   }, [videoEnded]); 
 
   const youtubeOpts = {
     height: '390',
     width: '100%',
-    playerVars: {
-      autoplay: 0, 
-      rel: 0, 
-    },
+    playerVars: { autoplay: 0, rel: 0 },
   };
 
   // ==========================================================
@@ -191,14 +170,10 @@ const speakQuestion = (text) => {
   const startRecording = async () => {
     try {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        alert("Trình duyệt không hỗ trợ SpeechRecognition");
-        return;
-      }
+      if (!SpeechRecognition) return alert("Trình duyệt không hỗ trợ SpeechRecognition");
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorderRef.current = new MediaRecorder(stream);
       audioChunksRef.current = [];
 
       const recognition = new SpeechRecognition();
@@ -222,15 +197,14 @@ const speakQuestion = (text) => {
       recognition.onstart = () => setIsTranscribing(true);
       recognition.onend = () => setIsTranscribing(false);
 
-      mediaRecorder.ondataavailable = (e) => audioChunksRef.current.push(e.data);
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: "audio/wav" });
-        setAudioBlob(blob);
+      mediaRecorderRef.current.ondataavailable = (e) => audioChunksRef.current.push(e.data);
+      mediaRecorderRef.current.onstop = () => {
+        setAudioBlob(new Blob(audioChunksRef.current, { type: "audio/wav" }));
         stream.getTracks().forEach((t) => t.stop());
         recognition.stop();
       };
 
-      mediaRecorder.start();
+      mediaRecorderRef.current.start();
       recognition.start();
       setIsRecording(true);
     } catch (err) {
@@ -259,10 +233,7 @@ const speakQuestion = (text) => {
   // ==========================================================
   const submitAnswer = async () => {
     if (!currentQuestion) return;
-    if (!recordingTranscript.trim()) {
-      alert("Chưa có nội dung trả lời, vui lòng nói lại!");
-      return;
-    }
+    if (!recordingTranscript.trim()) return alert("Chưa có nội dung trả lời!");
 
     setIsProcessing(true);
     try {
@@ -275,7 +246,28 @@ const speakQuestion = (text) => {
         headers: { "Content-Type": "multipart/form-data" },
       });
       
-      setEvaluationResult(res.data);
+      const resultData = res.data;
+      const score = resultData.score || 0;
+
+      // ✅ LOGIC MỚI: Cập nhật điểm số và lịch sử
+      const isCorrect = score > 80;
+      if (isCorrect) {
+        setCorrectCount((prev) => prev + 1);
+        // ❌ ĐÃ XOÁ: playSuccessSound() ở đây để không kêu mỗi câu
+      }
+
+      // Lưu vào lịch sử để hiển thị cuối bài
+      setResultsHistory((prev) => [
+        ...prev,
+        {
+          question: currentQuestion.question,
+          score: score,
+          isCorrect: isCorrect,
+          userAnswer: recordingTranscript.trim()
+        }
+      ]);
+
+      setEvaluationResult(resultData);
       setShowQuestionText(true); 
 
     } catch (err) {
@@ -286,6 +278,18 @@ const speakQuestion = (text) => {
         feedback: "Có lỗi khi chấm điểm.",
         suggestion: "Vui lòng thử lại.",
       });
+      
+      // Vẫn lưu lịch sử dù lỗi để không bị kẹt
+      setResultsHistory((prev) => [
+        ...prev,
+        {
+          question: currentQuestion.question,
+          score: 0,
+          isCorrect: false,
+          userAnswer: recordingTranscript.trim(),
+          error: true
+        }
+      ]);
       setShowQuestionText(true); 
     } finally {
       setIsProcessing(false);
@@ -310,7 +314,11 @@ const speakQuestion = (text) => {
       }, 500); 
 
     } else {
-      alert("🎉 Chúc mừng! Bạn đã hoàn thành bài tập.");
+      // ✅ LOGIC MỚI: Hiển thị màn hình tổng kết
+      setIsFinished(true);
+      
+      // 🔊 CHỈ PHÁT ÂM THANH KHI HOÀN THÀNH TẤT CẢ
+      playSuccessSound();
     }
   };
 
@@ -340,71 +348,36 @@ const speakQuestion = (text) => {
 
           <h3 style={{ marginTop: "20px" }}>Video Listening</h3>
 
-          {/* Wrapper cho Video và Overlay */}
           <div style={{ position: "relative", borderRadius: "8px", overflow: "hidden", background: "#000", height: "390px" }}>
-            
-            {/* 1. YouTube Player */}
             {youtubeId ? (
-              <YouTube 
-                videoId={youtubeId} 
-                opts={youtubeOpts} 
-                onReady={onPlayerReady} 
-              />
+              <YouTube videoId={youtubeId} opts={youtubeOpts} onReady={onPlayerReady} />
             ) : (
               !isLoadingExercise && <p style={{color: 'white', padding: 20}}>Không tìm thấy Video.</p>
             )}
 
-            {/* 2. ✅ OVERLAY CHE PHỦ (Hiện ra khi video kết thúc/ngắt sớm) */}
             {showVideoOverlay && (
               <div style={{
-                position: "absolute",
-                top: 0, left: 0, right: 0, bottom: 0,
-                backgroundColor: "rgba(0, 0, 0, 0.9)", // Màu nền đen che video
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-                zIndex: 10 // Đè lên iframe youtube
+                position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: "rgba(0, 0, 0, 0.9)",
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                color: "white", zIndex: 10
               }}>
                 <div style={{fontSize: "50px"}}>✅</div>
                 <h3>Hoàn thành video!</h3>
                 <p>Hãy chuyển sang phần bài tập bên cạnh.</p>
-                <button 
-                  onClick={handleReplayVideo}
-                  style={{
-                    marginTop: "10px",
-                    padding: "8px 16px",
-                    background: "transparent",
-                    border: "1px solid white",
-                    color: "white",
-                    borderRadius: "4px",
-                    cursor: "pointer"
-                  }}
-                >
+                <button onClick={handleReplayVideo} style={{ marginTop: "10px", padding: "8px 16px", background: "transparent", border: "1px solid white", color: "white", borderRadius: "4px", cursor: "pointer" }}>
                   🔄 Xem lại video
                 </button>
               </div>
             )}
-
           </div>
 
-          <div
-            style={{
-              marginTop: "15px",
-              background: "#f8f9fa",
-              padding: "15px",
-              borderRadius: "8px",
-              border: "1px solid #e9ecef"
-            }}
-          >
+          <div style={{ marginTop: "15px", background: "#f8f9fa", padding: "15px", borderRadius: "8px", border: "1px solid #e9ecef" }}>
             <h4>📖 Hướng dẫn tương tác</h4>
             <ul style={{ paddingLeft: "20px", lineHeight: "1.6", color: "#555" }}>
               <li>Xem <strong>toàn bộ video</strong> để mở khóa bài tập.</li>
-              <li>Sau khi video kết thúc, hệ thống sẽ <strong>tự động đọc câu hỏi</strong>.</li>
-              <li>Bạn sẽ <strong>không nhìn thấy chữ</strong> của câu hỏi khi đang nghe (luyện phản xạ).</li>
-              <li>Bấm <strong>Ghi âm</strong> để trả lời câu hỏi vừa nghe.</li>
-              <li>Sau khi <strong>Nộp bài</strong>, nội dung câu hỏi và kết quả chấm điểm sẽ hiện ra.</li>
+              <li>Hệ thống tự động đọc câu hỏi, bạn cần <strong>Ghi âm</strong> để trả lời.</li>
+              <li>Điểm số <strong>{">"} 80</strong> được tính là 1 câu đúng.</li>
             </ul>
           </div>
         </div>
@@ -417,34 +390,85 @@ const speakQuestion = (text) => {
             <p>⏳ Đang tải bài tập...</p>
           ) : currentQuestion ? (
             
-            videoEnded ? (
-              <div style={{ background: "#fff", borderRadius: "8px", padding: "20px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
+            // ✅ ĐIỀU KIỆN HIỂN THỊ: Video chưa xem xong -> Khóa
+            !videoEnded ? (
+                <div style={{padding: "40px 20px", textAlign: 'center', background: '#f8f9fa', borderRadius: 8, border: "1px solid #ddd"}}>
+                    <div style={{fontSize: "40px", marginBottom: "10px"}}>🔒</div>
+                    <h3>Bài tập đang bị khóa</h3>
+                    <p style={{color: "#666"}}>Vui lòng xem hết video để mở khóa câu hỏi đầu tiên.</p>
+                </div>
+            ) : 
+            // ✅ ĐIỀU KIỆN HIỂN THỊ: Đã xong bài tập -> Hiện bảng tổng kết
+            isFinished ? (
+              <div style={{ background: "#fff", borderRadius: "8px", padding: "30px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", textAlign: "center" }}>
+                <h2 style={{ color: "#28a745" }}>🎉 Hoàn thành bài tập!</h2>
+                <div style={{ fontSize: "60px", margin: "20px 0" }}>🏆</div>
                 
-                <h4>Câu hỏi {currentIndex + 1}:</h4>
+                <div style={{ display: "flex", justifyContent: "space-around", margin: "20px 0", padding: "20px", background: "#f8f9fa", borderRadius: "10px" }}>
+                   <div>
+                      <h3 style={{ margin: 0, color: "#007bff" }}>{exercises.length}</h3>
+                      <small>Tổng câu</small>
+                   </div>
+                   <div>
+                      <h3 style={{ margin: 0, color: "#28a745" }}>{correctCount}</h3>
+                      <small>Đúng ({">"}80đ)</small>
+                   </div>
+                   <div>
+                      <h3 style={{ margin: 0, color: "#dc3545" }}>{exercises.length - correctCount}</h3>
+                      <small>Cần cố gắng</small>
+                   </div>
+                </div>
+
+                <div style={{ textAlign: "left", maxHeight: "300px", overflowY: "auto", border: "1px solid #eee", padding: "10px", borderRadius: "8px" }}>
+                    <h5 style={{marginTop: 0}}>Chi tiết kết quả:</h5>
+                    <ul style={{ listStyle: "none", padding: 0 }}>
+                        {resultsHistory.map((res, idx) => (
+                            <li key={idx} style={{ padding: "10px", borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div>
+                                    <span style={{ fontWeight: "bold", marginRight: "10px" }}>Câu {idx + 1}:</span>
+                                    <span style={{ color: res.isCorrect ? "#28a745" : "#dc3545" }}>
+                                        {res.score} điểm
+                                    </span>
+                                </div>
+                                <span>{res.isCorrect ? "✅" : "⚠️"}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+
+                <div style={{ marginTop: "30px" }}>
+                  <Link to="/videos">
+                    <button style={btnStyle("#007bff")}>Về danh sách bài học</button>
+                  </Link>
+                </div>
+              </div>
+            ) : 
+            // ✅ ĐIỀU KIỆN HIỂN THỊ: Đang làm bài -> Hiện câu hỏi
+            (
+              <div style={{ background: "#fff", borderRadius: "8px", padding: "20px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
+                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: 10}}>
+                   <span>Câu hỏi {currentIndex + 1}/{exercises.length}</span>
+                   <span style={{color: '#28a745', fontWeight: 'bold'}}>Đúng: {correctCount}</span>
+                </div>
                 
                 <div style={{
-                    background: showQuestionText ? "#e3f2fd" : "#f1f3f5",
-                    color: showQuestionText ? "#0d47a1" : "#666",
-                    padding: "20px",
-                    borderRadius: "8px",
-                    minHeight: "80px",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    textAlign: "center",
-                    fontSize: "18px",
-                    fontWeight: "500",
-                    border: showQuestionText ? "1px solid #90caf9" : "1px dashed #ccc"
+                  background: showQuestionText ? "#e3f2fd" : "#f1f3f5",
+                  color: showQuestionText ? "#0d47a1" : "#666",
+                  padding: "20px",
+                  borderRadius: "8px",
+                  minHeight: "80px",
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  textAlign: "center", fontSize: "18px", fontWeight: "500",
+                  border: showQuestionText ? "1px solid #90caf9" : "1px dashed #ccc"
                 }}>
                   {showQuestionText ? (
-                     <span>{currentQuestion.question}</span>
+                      <span>{currentQuestion.question}</span>
                   ) : (
-                     <>
-                       <span style={{fontSize: "40px", marginBottom: "10px"}}>🎧</span>
-                       <span>Đang phát câu hỏi... (Nghe kỹ nhé!)</span>
-                       <small style={{fontWeight: "normal", marginTop: "5px"}}>Trả lời xong sẽ hiện văn bản.</small>
-                     </>
+                      <>
+                        <span style={{fontSize: "40px", marginBottom: "10px"}}>🎧</span>
+                        <span>Đang phát câu hỏi... (Nghe kỹ nhé!)</span>
+                        <small style={{fontWeight: "normal", marginTop: "5px"}}>Trả lời xong sẽ hiện văn bản.</small>
+                      </>
                   )}
                 </div>
                 
@@ -499,18 +523,12 @@ const speakQuestion = (text) => {
                     
                     <div style={{textAlign: 'right', marginTop: '20px'}}>
                         <button onClick={nextQuestion} style={btnStyle("#17a2b8")}>
-                        Câu tiếp theo 👉
+                        {currentIndex + 1 < exercises.length ? "Câu tiếp theo 👉" : "Xem tổng kết 🏁"}
                         </button>
                     </div>
                   </div>
                 )}
               </div>
-            ) : (
-                <div style={{padding: "40px 20px", textAlign: 'center', background: '#f8f9fa', borderRadius: 8, border: "1px solid #ddd"}}>
-                    <div style={{fontSize: "40px", marginBottom: "10px"}}>🔒</div>
-                    <h3>Bài tập đang bị khóa</h3>
-                    <p style={{color: "#666"}}>Vui lòng xem hết video để mở khóa câu hỏi đầu tiên.</p>
-                </div>
             )
           ) : (
             <p>{isLoadingExercise ? "" : "❌ Không tìm thấy dữ liệu câu hỏi."}</p>
